@@ -6,6 +6,7 @@ setup(
         packages=find_packages(),
         description='A simple GPT interface',
         long_description=open('README.md').read(),
+        long_description_content_type='text/markdown',
         author='Filip Schauer',
         author_email='filip@schauer.com',
         url='https://github.com/Ascyt/ezgpt',

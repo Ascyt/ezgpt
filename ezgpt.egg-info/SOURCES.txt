@@ -1,0 +1,11 @@
+LICENSE
+MANIFEST.in
+README.md
+setup.py
+ezgpt/__init__.py
+ezgpt/ezgpt.py
+ezgpt.egg-info/PKG-INFO
+ezgpt.egg-info/SOURCES.txt
+ezgpt.egg-info/dependency_links.txt
+ezgpt.egg-info/requires.txt
+ezgpt.egg-info/top_level.txt
