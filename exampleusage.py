@@ -1,4 +1,4 @@
-import ezgpt
+from ezgpt import ezgpt
 
 prompt = 'give python factorial number'
 
