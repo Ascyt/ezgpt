@@ -1,26 +1,26 @@
-# easygpt
+# ezgpt
 
-`easygpt` is a Python library designed to simplify the interaction with OpenAI's GPT (Generative Pre-trained Transformer) models. It provides a convenient interface for sending prompts to the model and receiving responses, with optional logging for debugging purposes.
+`ezgpt` is a Python library designed to simplify the interaction with OpenAI's GPT (Generative Pre-trained Transformer) models. It provides a convenient interface for sending prompts to the model and receiving responses, with optional logging for debugging purposes.
 
 ## Installation
 
-You can install `easygpt` via pip:
+You can install `ezgpt` via pip:
 ```bash
-pip install easygpt
+pip install ezgpt
 ```
 
 ## Usage
 
-To use `easygpt`, you need to have an API key from OpenAI. This key must be set as an environment variable `OpenAI_APIKey` before using the library.
+To use `ezgpt`, you need to have an API key from OpenAI. This key must be set as an environment variable `OpenAI_APIKey` before using the library.
 
 ### Initialization
 
-First, import the `easygpt` module and initialize the `gpt` class:
+First, import the `ezgpt` module and initialize the `gpt` class:
 
 ```python
-import easygpt
+import ezgpt
 
-gpt = easygpt.gpt()
+gpt = ezgpt.gpt()
 ```
 
 The `gpt` class constructor accepts the following parameters:
@@ -61,9 +61,9 @@ response = gpt.get(messages=gpt.previous, user="Another message")
 
 ### Logging
 
-If logging is enabled, `easygpt` will print the interaction with the GPT model to the console. This includes the prompts sent by the user and system, as well as the responses from the assistant.
+If logging is enabled, `ezgpt` will print the interaction with the GPT model to the console. This includes the prompts sent by the user and system, as well as the responses from the assistant.
 
 ## Notes
 
-- The `easygpt` library assumes that the OpenAI API key is set in the environment variable `OpenAI_APIKey`.
+- The `ezgpt` library assumes that the OpenAI API key is set in the environment variable `OpenAI_APIKey`.
 - The `gpt` class maintains a history of the conversation in the `previous` attribute, which can be used to provide context for subsequent requests.
