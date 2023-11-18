@@ -1,8 +1,8 @@
-import easygpt
+import ezgpt
 
 prompt = 'give python factorial number'
 
-gpt = easygpt.gpt(logs=True)
+gpt = ezgpt.gpt(logs=True)
 
 print('Improve prompt...')
 improved:str = gpt.get(user=prompt, system="You will be provided with a prompt. Your task is not to implement it, but to correct it and improve its phrasing.")
