@@ -28,7 +28,7 @@ class gpt:
         spaces = (12 - len(role)) / 2
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
 
-    def get(self, system=None, user=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
+    def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
         if messages is None:
             messages = []
 
@@ -68,3 +68,12 @@ class gpt:
         self.previous.append(response.choices[0].message)
 
         return response.choices[0].message.content
+
+staticGpt = gpt()
+
+def get(user=None, use_previous=False, system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    return staticGpt.get(user=user, messages=(staticGpt.previous if use_previous else None), system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
+
+def reset(model='gpt-3.5-turbo'):
+    staticGpt.previous = []
+    staticGpt.model = model

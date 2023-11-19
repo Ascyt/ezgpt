@@ -1,1 +1,1 @@
-from .ezgpt import gpt 
+from .ezgpt import gpt, get, reset

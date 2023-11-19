@@ -63,6 +63,24 @@ response = gpt.get(messages=gpt.previous, user="Another message")
 
 If logging is enabled, `ezgpt` will print the interaction with the GPT model to the console. This includes the prompts sent by the user and system, as well as the responses from the assistant.
 
+## Simpler usage
+If you don't care about any classes or instances, you can also just use the static `get` and `reset` commands:
+
+```python
+ezgpt.get('Hello!') 
+# 'Hello! How can I assist you today?'
+```
+Next to the normal GPT arguments, there's another boolean `use_previous` to use the previous conversation:
+```python
+ezgpt.get('What was my previous message?', True) 
+# 'Your previous message was "Hello".'
+```
+
+You can use the `reset` function to clear the previous messages, and optionally also change the model:
+```python
+ezgpt.reset('gpt-4')
+```
+
 ## Notes
 
 - The `ezgpt` library assumes that the OpenAI API key is set in the environment variable `OpenAI_APIKey`.
