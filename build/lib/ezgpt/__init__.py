@@ -1,1 +1,1 @@
-from .ezgpt import gpt, get, reset
+from .ezgpt import gpt, get, reset, conversation

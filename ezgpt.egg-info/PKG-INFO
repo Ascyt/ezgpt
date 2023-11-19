@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 0.2.1
+Version: 0.4.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -84,16 +84,40 @@ If you don't care about any classes or instances, you can also just use the stat
 ezgpt.get('Hello!') 
 # 'Hello! How can I assist you today?'
 ```
-Next to the normal GPT arguments, there's another boolean `use_previous` to use the previous conversation:
+Aside the normal GPT arguments, there's another boolean `use_previous()` to use the previous conversation:
 ```python
 ezgpt.get('What was my previous message?', True) 
 # 'Your previous message was "Hello".'
 ```
 
-You can use the `reset` function to clear the previous messages, and optionally also change the model:
+You can use the `reset()` function to clear the previous messages, and optionally also change the model:
 ```python
 ezgpt.reset('gpt-4')
 ```
+
+## Conversation
+
+An even simpler way to use GPT is using the `conversation()` static function. Here you can use the normal GPT arguments, and when you use it, you'll be able to have a conversation with GPT. 
+
+There are special commands you can use:
+
+- `?`: View the list of commands
+- `!`: Exit the conversation
+- `:[command]`: Run Python command: This will execute everything after the `:` as a line of Python. 
+    -   *Example: `:print('hello')`* will print `hello`
+- `#[property] [value]`: Set GPT's property, such as `model`. Remember to use `'` for strings. 
+    - *Example: `#model 'gpt-4'`* will set the model to `'gpt-4'`
+- `+[index] [message]`: Insert message before index (double `+` for assistant instead of user)
+    - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
+- `-[index]`: Remove message at index
+    - *Example: `-0` will remove the first message*
+- `~[index] [message]`: Change message at index (double `~` for reverse role)
+    - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
+- `@`: Copy last message to clipboard (requires `pyperclip` module)
+- `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
+- *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
+- `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
+    - *Example: `\- Hello` will add message `- Hello`*
 
 ## Notes
 

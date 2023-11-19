@@ -1,6 +1,7 @@
 import openai
 import os
 import math
+import json
 
 openai.api_key = os.environ.get('OpenAI_APIKey')
 
@@ -77,3 +78,125 @@ def get(user=None, use_previous=False, system=None, temperature=0, top_p=0, max_
 def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
+
+has_imported_pyperclip = False
+
+def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
+    if messages != None:
+        conv.previous = messages
+    
+    print('Conversation started. Type ? for a list of commands.\n')
+    if system != None:
+        print('{SYS} ' + system)
+
+    for i in range(len(conv.previous)):
+        brackets = '[]' if conv.previous[i]['role'] == 'user' else '<>'
+
+        print(brackets[0] + str(i) + brackets[1] + ' ' + conv.previous[i]['content'])
+
+    while True:
+        prompt = input(f'[{len(conv.previous)}] ')
+
+        if prompt == '?':
+            print('Commands:')
+            print('\t[?] View list of commands')
+            print('\t[!] Exit conversation')
+            print('\t[:] Run Python command')
+            print('\t[#] Set GPT\'s property')
+            print('\t[+] Insert message before index (double + for assistant)')
+            print('\t[-] Remove message at index')
+            print('\t[~] Change message at index (double ~ for reverse role)')
+            print('\t[@] Copy last message to clipboard')
+            print('\t[@@] Copy conversation JSON to clipboard')
+            print('\t[] Reload conversation')
+            print('\t[\\] Override command')
+            continue
+
+        def reset_conversation():
+            os.system('cls' if (os.name == 'nt') else 'clear')
+            
+            conversation(conv.model, conv.system, conv.previous.copy(), conv.temperature, conv.top_p, conv.max_tokens, conv.frequency_penalty, conv.presence_penalty)
+        
+        if prompt == '':
+            reset_conversation()
+            return
+
+        if prompt[0] != '\\':
+            if prompt == '!':
+                return
+
+            if prompt[0] == ':':
+                arg = prompt[1:]
+                exec(arg)
+                print(f'( Executed `{arg}` )')
+                continue
+
+            if prompt[0] == '#':
+                space = prompt.find(' ')
+                arg = f'conv.{prompt[1:space]}={prompt[space+1:]}'
+
+                exec(arg)
+                print(f'( Executed `{arg}` )')
+                continue
+
+            if prompt[0] == '+':
+                space = prompt.find(' ')
+                isAssistant = len(prompt) > 1 and prompt[1] == '+'
+                value = int(prompt[(2 if isAssistant else 1):space])
+                arg = prompt[space+1:]
+
+                conv.previous.insert(value, {'role': ('assistant' if isAssistant else 'user'), 'content': arg})
+                reset_conversation()
+                return
+            
+            if prompt[0] == '-':
+                value = int(prompt[1:])
+
+                conv.previous.pop(value)
+                reset_conversation()
+                return
+
+            if prompt[0] == '~':
+                space = prompt.find(' ')
+                changeRole = len(prompt) > 1 and prompt[1] == '~'
+                value = int(prompt[(2 if changeRole else 1):space])
+                arg = prompt[space+1:]
+
+                new_role = conv.previous[value]['role']
+                if changeRole:
+                    new_role = 'assistant' if new_role == 'user' else 'user'
+
+                conv.previous[value] = { 'role': new_role, 'content': arg }
+                reset_conversation()
+                return
+
+            if prompt == '@' or prompt == '@@':
+                global has_imported_pyperclip
+
+                if not has_imported_pyperclip:
+                    try:
+                        import pyperclip
+                    except ModuleNotFoundError:
+                        print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
+                        continue
+                    has_imported_pyperclip = True
+                
+                if prompt == '@':
+                    content = conv.previous[-1]['content']
+                    pyperclip.copy(content)
+                    print('( Copied last message to clipboard )')
+                    continue
+                if prompt == '@@':
+                    content = json.dumps(conv.previous)
+                    pyperclip.copy(content)
+                    print('( Copied JSON to clipboard )')
+                    continue
+        else:
+            prompt = prompt[1:]
+
+        response = conv.get(user=prompt, messages=conv.previous)
+        print(f'<{len(conv.previous) - 1}> ' + response)
+
+if __name__ == '__main__':
+    conversation()
