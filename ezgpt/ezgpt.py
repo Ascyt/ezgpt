@@ -3,6 +3,12 @@ import os
 import math
 import json
 
+try:
+    import pyperclip
+    has_imported_pyperclip = True
+except ModuleNotFoundError:
+    has_imported_pyperclip = False
+
 openai.api_key = os.environ.get('OpenAI_APIKey')
 
 class gpt:
@@ -78,8 +84,6 @@ def get(user=None, use_previous=False, system=None, temperature=0, top_p=0, max_
 def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
-
-has_imported_pyperclip = False
 
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
@@ -204,12 +208,8 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
                 global has_imported_pyperclip
 
                 if not has_imported_pyperclip:
-                    try:
-                        import pyperclip
-                    except ModuleNotFoundError:
-                        print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
-                        continue
-                    has_imported_pyperclip = True
+                    print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
+                    continue
                 
                 if prompt == '@':
                     content = conv.previous[-1]['content']
