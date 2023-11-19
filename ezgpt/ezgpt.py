@@ -111,6 +111,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
             print('\t[@@] Copy conversation JSON to clipboard')
             print('\t[] Reload conversation')
             print('\t[\\] Override command')
+            print('\t[_] Multiline (Ctrl+X with Enter to exit)')
             continue
 
         def reset_conversation():
@@ -170,6 +171,34 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
                 conv.previous[value] = { 'role': new_role, 'content': arg }
                 reset_conversation()
                 return
+
+            if prompt == '_': 
+                print('( Started multi-line. ^X to exit. )')
+
+                prompt = ''
+                line_number = 1
+
+                while True:
+                    new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
+                    if new_line == '\x18':
+                        break
+                    if new_line == '\x15':
+                        previous_line = prompt[:-1].rfind('\n')
+                        if previous_line == -1:
+                            print('Error:\n\tNo previous line')
+                            continue
+
+                        prompt = prompt[:(previous_line + 1)]
+                        line_number -= 1
+
+                        print('( Removed previous line )')
+
+                        continue
+                    prompt += new_line + '\n'
+                    line_number += 1
+
+                prompt = prompt[:-1]
+                print('( Ended multi-line )')
 
             if prompt == '@' or prompt == '@@':
                 global has_imported_pyperclip
