@@ -28,7 +28,7 @@ class gpt:
         spaces = (12 - len(role)) / 2
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
 
-    def get(self, system=None, user=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
+    def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
         if messages is None:
             messages = []
 
