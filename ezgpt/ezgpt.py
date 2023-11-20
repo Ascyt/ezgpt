@@ -3,6 +3,7 @@ import os
 import math
 import json
 import asyncio
+import getpass
 
 try:
     import pyperclip
@@ -10,7 +11,7 @@ try:
 except ModuleNotFoundError:
     has_imported_pyperclip = False
 
-client = openai.AsyncOpenAI()
+client = None
 
 def set_api_key(api_key):
     global client
@@ -41,6 +42,15 @@ class gpt:
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
 
     async def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
+        global client
+        if client is None:
+            try:
+                client = openai.AsyncOpenAI()
+            except openai.OpenAIError:
+                print('No API key found in \"OPENAI_API_KEY\" environment variable.')
+                print('You can input your API key here instead, though this is not recommended:')
+                client = openai.AsyncOpenAI(api_key=(getpass.getpass('\tOpenAI API Key:')))
+
         if messages is None:
             messages = []
 
@@ -91,6 +101,19 @@ def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
 
+def print_messages(messages):
+    for i in range(len(messages)):
+        brackets = '[]' if messages[i]['role'] == 'user' else \
+            ('<>' if messages[i]['role'] == 'assistant' else '{}')
+
+        lines = messages[i]['content'].split('\n')
+
+        prefix = brackets[0] + str(i) + brackets[1] + ' '
+
+        print(prefix + lines[0])
+        for i in range(1, len(lines)):
+            print((' ' * len(prefix)) + lines[i])
+
 async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
     if messages != None:
@@ -104,17 +127,13 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
 
     if system != None:
         print('{SYS} ' + system)
-
-    for i in range(len(conv.previous)):
-        brackets = '[]' if conv.previous[i]['role'] == 'user' else \
-            ('<>' if conv.previous[i]['role'] == 'assistant' else '{}')
-
-        print(brackets[0] + str(i) + brackets[1] + ' ' + conv.previous[i]['content'])
     
-    async def reset_conversation(messages=None, user=None):
+    def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
+        print_messages(messages=((conv.previous + [additional_message]) if additional_message != None else conv.previous))
+
+    reprint_conversation()
         
-        await conversation(model=conv.model, system=conv.system, messages=(conv.previous.copy() if messages == None else messages), temperature=conv.temperature, top_p=conv.top_p, max_tokens=conv.max_tokens, frequency_penalty=conv.frequency_penalty, presence_penalty=conv.presence_penalty, user=user)
     
     while True:
         if user != None:
@@ -143,8 +162,8 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
 
             
             if prompt == '':
-                await reset_conversation()
-                return
+                reprint_conversation()
+                continue
 
             if prompt[0] != '\\':
                 if prompt == '!':
@@ -162,6 +181,7 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
 
                     exec(arg)
                     print(f'( Executed `{arg}` )')
+                    reprint_conversation()
                     continue
 
                 elif prompt[0] == '+':
@@ -171,36 +191,47 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
                     arg = prompt[space+1:]
 
                     conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
-                    await reset_conversation()
-                    return
+                    reprint_conversation()
+                    continue
                 
                 elif prompt[0] == '-':
                     clear_everything = len(prompt) == 2 and prompt[1] == '-'
 
                     if clear_everything:
                         conv.previous = []
-                        await reset_conversation()
-                        return
+                        reprint_conversation()
+                        continue
 
                     value = int(prompt[1:])
 
                     conv.previous.pop(value)
-                    await reset_conversation()
-                    return
+                    reprint_conversation()
+                    continue
 
                 elif prompt[0] == '~':
                     space = prompt.find(' ')
                     change_role = len(prompt) > 1 and prompt[1] == '~'
-                    value = int(prompt[(2 if change_role else 1):space])
-                    arg = prompt[space+1:]
+                    value = int(prompt[2:] if space == -1 else \
+                                 prompt[(2 if change_role else 1):space])
 
                     new_role = conv.previous[value]['role']
                     if change_role:
                         new_role = 'assistant' if new_role == 'user' else 'user'
+                    
+                    if space == -1 or len(prompt) <= space or prompt[space+1:].isspace():
+                        if change_role:
+                            conv.previous[value] = {'role': new_role, 'content':conv.previous[value]['content']}
+                            reprint_conversation()
+                            continue
+                        print('Error:\n\tBody cannot be empty when single ~ used')
+                        continue
+
+                    arg = prompt[space+1:]
+
 
                     conv.previous[value] = { 'role': new_role, 'content': arg }
-                    await reset_conversation()
-                    return
+                    reprint_conversation()
+                    continue
 
                 elif prompt == '_': 
                     print('( Started multi-line. ^X to exit. )')
@@ -234,8 +265,9 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
                     if len(conv.previous) < 2 or conv.previous[-1]['role'] != 'assistant':
                         print('Error:\n\tMust have at least two messages and last message must be an assistant message.')
                         continue
-                    await reset_conversation(user=conv.previous[-2]['content'], messages=conv.previous[:-2])
-                    return
+                    prompt = conv.previous[-2]['content']
+                    conv.previous = conv.previous[:-2]
+                    reprint_conversation(additional_message={'role':'user','content':prompt})
 
                 elif prompt == '@' or prompt == '@@':
                     global has_imported_pyperclip

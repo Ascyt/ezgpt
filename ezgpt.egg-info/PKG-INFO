@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 0.7.0
+Version: 0.7.1
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -11,7 +11,6 @@ Classifier: License :: OSI Approved :: MIT License
 Requires-Python: >=3.11.2
 Description-Content-Type: text/markdown
 License-File: LICENSE
-Requires-Dist: openai>=1.0.0
 
 # ezgpt
 
@@ -112,7 +111,7 @@ There are special commands you can use:
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
 - `-[index]`: Remove message at index (double `-` for clear everything)
     - *Example: `-0` will remove the first message*
-- `~[index] [message]`: Change message at index (double `~` for reverse role)
+- `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need an message argument.
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
 - `&`: Re-generates the last message GPT sent. 
 - `@`: Copy last message to clipboard (requires `pyperclip` module)
