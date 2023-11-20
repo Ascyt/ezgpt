@@ -153,15 +153,22 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temper
 
             if prompt[0] == '+':
                 space = prompt.find(' ')
-                isAssistant = len(prompt) > 1 and prompt[1] == '+'
-                value = int(prompt[(2 if isAssistant else 1):space])
+                is_assistant = len(prompt) > 1 and prompt[1] == '+'
+                value = int(prompt[(2 if is_assistant else 1):space])
                 arg = prompt[space+1:]
 
-                conv.previous.insert(value, {'role': ('assistant' if isAssistant else 'user'), 'content': arg})
+                conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
                 await reset_conversation()
                 return
             
             if prompt[0] == '-':
+                clear_everything = len(prompt) == 2 and prompt[1] == '-'
+
+                if clear_everything:
+                    conv.previous = []
+                    await reset_conversation()
+                    return
+
                 value = int(prompt[1:])
 
                 conv.previous.pop(value)
@@ -170,12 +177,12 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temper
 
             if prompt[0] == '~':
                 space = prompt.find(' ')
-                changeRole = len(prompt) > 1 and prompt[1] == '~'
-                value = int(prompt[(2 if changeRole else 1):space])
+                change_role = len(prompt) > 1 and prompt[1] == '~'
+                value = int(prompt[(2 if change_role else 1):space])
                 arg = prompt[space+1:]
 
                 new_role = conv.previous[value]['role']
-                if changeRole:
+                if change_role:
                     new_role = 'assistant' if new_role == 'user' else 'user'
 
                 conv.previous[value] = { 'role': new_role, 'content': arg }

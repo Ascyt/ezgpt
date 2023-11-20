@@ -95,7 +95,7 @@ There are special commands you can use:
     - *Example: `#model 'gpt-4'`* will set the model to `'gpt-4'`
 - `+[index] [message]`: Insert message before index (double `+` for assistant instead of user)
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
-- `-[index]`: Remove message at index
+- `-[index]`: Remove message at index (double `-` for clear everything)
     - *Example: `-0` will remove the first message*
 - `~[index] [message]`: Change message at index (double `~` for reverse role)
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
