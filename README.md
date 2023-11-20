@@ -99,6 +99,7 @@ There are special commands you can use:
     - *Example: `-0` will remove the first message*
 - `~[index] [message]`: Change message at index (double `~` for reverse role)
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
+- `&`: Re-generates the last message GPT sent. 
 - `@`: Copy last message to clipboard (requires `pyperclip` module)
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 

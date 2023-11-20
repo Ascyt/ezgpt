@@ -91,151 +91,171 @@ def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
 
-async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
     if messages != None:
         conv.previous = messages
     
     print('Conversation started. Type ? for a list of commands.\n')
+
+    if len(conv.previous) > 0 and conv.previous[0]['role'] == 'system':
+        system = conv.previous[0]['content']
+        conv.previous.pop(0)
+
     if system != None:
         print('{SYS} ' + system)
 
     for i in range(len(conv.previous)):
-        brackets = '[]' if conv.previous[i]['role'] == 'user' else '<>'
+        brackets = '[]' if conv.previous[i]['role'] == 'user' else \
+            ('<>' if conv.previous[i]['role'] == 'assistant' else '{}')
 
         print(brackets[0] + str(i) + brackets[1] + ' ' + conv.previous[i]['content'])
-
-    while True:
-        prompt = input(f'[{len(conv.previous)}] ')
-
-        if prompt == '?':
-            print('Commands:')
-            print('\t[?] View list of commands')
-            print('\t[!] Exit conversation')
-            print('\t[:] Run Python command')
-            print('\t[#] Set GPT\'s property')
-            print('\t[+] Insert message before index (double + for assistant)')
-            print('\t[-] Remove message at index')
-            print('\t[~] Change message at index (double ~ for reverse role)')
-            print('\t[@] Copy last message to clipboard')
-            print('\t[@@] Copy conversation JSON to clipboard')
-            print('\t[] Reload conversation')
-            print('\t[\\] Override command')
-            print('\t[_] Multiline (Ctrl+X with Enter to exit)')
-            continue
-
-        async def reset_conversation():
-            os.system('cls' if (os.name == 'nt') else 'clear')
-            
-            await conversation(conv.model, conv.system, conv.previous.copy(), conv.temperature, conv.top_p, conv.max_tokens, conv.frequency_penalty, conv.presence_penalty)
+    
+    async def reset_conversation(messages=None, user=None):
+        os.system('cls' if (os.name == 'nt') else 'clear')
         
-        if prompt == '':
-            await reset_conversation()
-            return
+        await conversation(model=conv.model, system=conv.system, messages=(conv.previous.copy() if messages == None else messages), temperature=conv.temperature, top_p=conv.top_p, max_tokens=conv.max_tokens, frequency_penalty=conv.frequency_penalty, presence_penalty=conv.presence_penalty, user=user)
+    
+    while True:
+        if user != None:
+            prompt = user
+            user = None
+            print(f'[{len(conv.previous)}] {prompt}')
+        else:
+            prompt = input(f'[{len(conv.previous)}] ')
 
-        if prompt[0] != '\\':
-            if prompt == '!':
-                return
-
-            if prompt[0] == ':':
-                arg = prompt[1:]
-                exec(arg)
-                print(f'( Executed `{arg}` )')
+            if prompt == '?':
+                print('Commands:')
+                print('\t[?] View list of commands')
+                print('\t[!] Exit conversation')
+                print('\t[:] Run Python command')
+                print('\t[#] Set GPT\'s property')
+                print('\t[+] Insert message before index (double + for assistant)')
+                print('\t[-] Remove message at index')
+                print('\t[~] Change message at index (double ~ for reverse role)')
+                print('\t[&] Re-generate last GPT message')
+                print('\t[@] Copy last message to clipboard')
+                print('\t[@@] Copy conversation JSON to clipboard')
+                print('\t[] Reload conversation')
+                print('\t[\\] Override command')
+                print('\t[_] Multiline (Ctrl+X with Enter to exit)')
                 continue
 
-            if prompt[0] == '#':
-                space = prompt.find(' ')
-                arg = f'conv.{prompt[1:space]}={prompt[space+1:]}'
-
-                exec(arg)
-                print(f'( Executed `{arg}` )')
-                continue
-
-            if prompt[0] == '+':
-                space = prompt.find(' ')
-                is_assistant = len(prompt) > 1 and prompt[1] == '+'
-                value = int(prompt[(2 if is_assistant else 1):space])
-                arg = prompt[space+1:]
-
-                conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
+            
+            if prompt == '':
                 await reset_conversation()
                 return
-            
-            if prompt[0] == '-':
-                clear_everything = len(prompt) == 2 and prompt[1] == '-'
 
-                if clear_everything:
-                    conv.previous = []
+            if prompt[0] != '\\':
+                if prompt == '!':
+                    return
+
+                elif prompt[0] == ':':
+                    arg = prompt[1:]
+                    exec(arg)
+                    print(f'( Executed `{arg}` )')
+                    continue
+
+                elif prompt[0] == '#':
+                    space = prompt.find(' ')
+                    arg = f'conv.{prompt[1:space]}={prompt[space+1:]}'
+
+                    exec(arg)
+                    print(f'( Executed `{arg}` )')
+                    continue
+
+                elif prompt[0] == '+':
+                    space = prompt.find(' ')
+                    is_assistant = len(prompt) > 1 and prompt[1] == '+'
+                    value = int(prompt[(2 if is_assistant else 1):space])
+                    arg = prompt[space+1:]
+
+                    conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
+                    await reset_conversation()
+                    return
+                
+                elif prompt[0] == '-':
+                    clear_everything = len(prompt) == 2 and prompt[1] == '-'
+
+                    if clear_everything:
+                        conv.previous = []
+                        await reset_conversation()
+                        return
+
+                    value = int(prompt[1:])
+
+                    conv.previous.pop(value)
                     await reset_conversation()
                     return
 
-                value = int(prompt[1:])
+                elif prompt[0] == '~':
+                    space = prompt.find(' ')
+                    change_role = len(prompt) > 1 and prompt[1] == '~'
+                    value = int(prompt[(2 if change_role else 1):space])
+                    arg = prompt[space+1:]
 
-                conv.previous.pop(value)
-                await reset_conversation()
-                return
+                    new_role = conv.previous[value]['role']
+                    if change_role:
+                        new_role = 'assistant' if new_role == 'user' else 'user'
 
-            if prompt[0] == '~':
-                space = prompt.find(' ')
-                change_role = len(prompt) > 1 and prompt[1] == '~'
-                value = int(prompt[(2 if change_role else 1):space])
-                arg = prompt[space+1:]
+                    conv.previous[value] = { 'role': new_role, 'content': arg }
+                    await reset_conversation()
+                    return
 
-                new_role = conv.previous[value]['role']
-                if change_role:
-                    new_role = 'assistant' if new_role == 'user' else 'user'
+                elif prompt == '_': 
+                    print('( Started multi-line. ^X to exit. )')
 
-                conv.previous[value] = { 'role': new_role, 'content': arg }
-                await reset_conversation()
-                return
+                    prompt = ''
+                    line_number = 1
 
-            if prompt == '_': 
-                print('( Started multi-line. ^X to exit. )')
+                    while True:
+                        new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
+                        if new_line == '\x18':
+                            break
+                        if new_line == '\x15':
+                            previous_line = prompt[:-1].rfind('\n')
+                            if previous_line == -1:
+                                print('Error:\n\tNo previous line')
+                                continue
 
-                prompt = ''
-                line_number = 1
+                            prompt = prompt[:(previous_line + 1)]
+                            line_number -= 1
 
-                while True:
-                    new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
-                    if new_line == '\x18':
-                        break
-                    if new_line == '\x15':
-                        previous_line = prompt[:-1].rfind('\n')
-                        if previous_line == -1:
-                            print('Error:\n\tNo previous line')
+                            print('( Removed previous line )')
+
                             continue
+                        prompt += new_line + '\n'
+                        line_number += 1
 
-                        prompt = prompt[:(previous_line + 1)]
-                        line_number -= 1
-
-                        print('( Removed previous line )')
-
-                        continue
-                    prompt += new_line + '\n'
-                    line_number += 1
-
-                prompt = prompt[:-1]
-                print('( Ended multi-line )')
-
-            if prompt == '@' or prompt == '@@':
-                global has_imported_pyperclip
-
-                if not has_imported_pyperclip:
-                    print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
-                    continue
+                    prompt = prompt[:-1]
+                    print('( Ended multi-line )')
                 
-                if prompt == '@':
-                    content = conv.previous[-1]['content']
-                    pyperclip.copy(content)
-                    print('( Copied last message to clipboard )')
-                    continue
-                if prompt == '@@':
-                    content = json.dumps(conv.previous)
-                    pyperclip.copy(content)
-                    print('( Copied JSON to clipboard )')
-                    continue
-        else:
-            prompt = prompt[1:]
+                elif prompt == '&':
+                    if len(conv.previous) < 2 or conv.previous[-1]['role'] != 'assistant':
+                        print('Error:\n\tMust have at least two messages and last message must be an assistant message.')
+                        continue
+                    await reset_conversation(user=conv.previous[-2]['content'], messages=conv.previous[:-2])
+                    return
+
+                elif prompt == '@' or prompt == '@@':
+                    global has_imported_pyperclip
+
+                    if not has_imported_pyperclip:
+                        print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
+                        continue
+                    
+                    if prompt == '@':
+                        content = conv.previous[-1]['content']
+                        pyperclip.copy(content)
+                        print('( Copied last message to clipboard )')
+                        continue
+                    if prompt == '@@':
+                        content = json.dumps(conv.previous)
+                        pyperclip.copy(content)
+                        print('( Copied JSON to clipboard )')
+                        continue
+            else:
+                prompt = prompt[1:]
 
         response = await conv.get(user=prompt, messages=conv.previous)
         print(f'<{len(conv.previous) - 1}> ' + response)
