@@ -2,6 +2,7 @@ import openai
 import os
 import math
 import json
+import asyncio
 
 try:
     import pyperclip
@@ -9,7 +10,11 @@ try:
 except ModuleNotFoundError:
     has_imported_pyperclip = False
 
-openai.api_key = os.environ.get('OpenAI_APIKey')
+client = openai.AsyncOpenAI()
+
+def set_api_key(api_key):
+    global client
+    client = openai.AsyncOpenAI(api_key=api_key)
 
 class gpt:
     def __init__(self, model='gpt-3.5-turbo', system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0, logs=False):
@@ -35,7 +40,7 @@ class gpt:
         spaces = (12 - len(role)) / 2
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
 
-    def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
+    async def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
         if messages is None:
             messages = []
 
@@ -58,7 +63,7 @@ class gpt:
           for message in messages:
               self._print_log(message['role'], message['content'], '[]')
         
-        response = openai.ChatCompletion.create(
+        response = await client.chat.completions.create(
             model=self.model,
             messages=messages,
             temperature=temperature,
@@ -78,14 +83,14 @@ class gpt:
 
 staticGpt = gpt()
 
-def get(user=None, use_previous=False, system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
-    return staticGpt.get(user=user, messages=(staticGpt.previous if use_previous else None), system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
+async def get(user=None, use_previous=False, system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    return await staticGpt.get(user=user, messages=(staticGpt.previous if use_previous else None), system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
 
 def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
 
-def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
     if messages != None:
         conv.previous = messages
@@ -118,13 +123,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
             print('\t[_] Multiline (Ctrl+X with Enter to exit)')
             continue
 
-        def reset_conversation():
+        async def reset_conversation():
             os.system('cls' if (os.name == 'nt') else 'clear')
             
-            conversation(conv.model, conv.system, conv.previous.copy(), conv.temperature, conv.top_p, conv.max_tokens, conv.frequency_penalty, conv.presence_penalty)
+            await conversation(conv.model, conv.system, conv.previous.copy(), conv.temperature, conv.top_p, conv.max_tokens, conv.frequency_penalty, conv.presence_penalty)
         
         if prompt == '':
-            reset_conversation()
+            await reset_conversation()
             return
 
         if prompt[0] != '\\':
@@ -152,14 +157,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
                 arg = prompt[space+1:]
 
                 conv.previous.insert(value, {'role': ('assistant' if isAssistant else 'user'), 'content': arg})
-                reset_conversation()
+                await reset_conversation()
                 return
             
             if prompt[0] == '-':
                 value = int(prompt[1:])
 
                 conv.previous.pop(value)
-                reset_conversation()
+                await reset_conversation()
                 return
 
             if prompt[0] == '~':
@@ -224,8 +229,11 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, temperature=
         else:
             prompt = prompt[1:]
 
-        response = conv.get(user=prompt, messages=conv.previous)
+        response = await conv.get(user=prompt, messages=conv.previous)
         print(f'<{len(conv.previous) - 1}> ' + response)
 
+def convo(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    asyncio.run(conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty))
+
 if __name__ == '__main__':
-    conversation()
+    convo()

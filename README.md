@@ -11,7 +11,7 @@ pip install ezgpt
 
 ## Usage
 
-To use `ezgpt`, you need to have an API key from OpenAI. This key must be set as an environment variable `OpenAI_APIKey` before using the library.
+To use `ezgpt`, you need to have an API key from OpenAI. This key must either be set as an environment variable `OPENAI_API_KEY` or be passed with the static function `ezgpt.set_api_key(api_key)` before using the library. Since these are async functions, you either have to use `await`, or `import asyncio` and use `asyncio.run()`.
 
 ### Initialization
 
@@ -39,7 +39,7 @@ The `gpt` class constructor accepts the following parameters:
 To send a prompt to the GPT model, use the `get` method of the `gpt` instance:
 
 ```python
-response = gpt.get(user="Your prompt here")
+response = await gpt.get(user="Your prompt here")
 ```
 
 The `get` method accepts the following parameters:
@@ -56,7 +56,7 @@ The `get` method accepts the following parameters:
 Since your last request is stored under `self.previous`, you can append a message to your conversation like that:
 
 ```python
-response = gpt.get(messages=gpt.previous, user="Another message")
+response = await gpt.get(messages=gpt.previous, user="Another message")
 ```
 
 ### Logging
@@ -64,15 +64,15 @@ response = gpt.get(messages=gpt.previous, user="Another message")
 If logging is enabled, `ezgpt` will print the interaction with the GPT model to the console. This includes the prompts sent by the user and system, as well as the responses from the assistant.
 
 ## Simpler usage
-If you don't care about any classes or instances, you can also just use the static `get` and `reset` commands:
+If you don't care about any classes or instances, you can also just use the static `get` and `reset` functions:
 
 ```python
-ezgpt.get('Hello!') 
+await ezgpt.get('Hello!') 
 # 'Hello! How can I assist you today?'
 ```
 Aside the normal GPT arguments, there's another boolean `use_previous()` to use the previous conversation:
 ```python
-ezgpt.get('What was my previous message?', True) 
+await ezgpt.get('What was my previous message?', True) 
 # 'Your previous message was "Hello".'
 ```
 
@@ -106,7 +106,9 @@ There are special commands you can use:
     - *Example: `\- Hello` will add message `- Hello`*
 - `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+U` with `Enter` to remove previous line.
 
+A shorthand to start `conversation` without having to await is using the `ezgpt.convo()` static function. 
+
 ## Notes
 
-- The `ezgpt` library assumes that the OpenAI API key is set in the environment variable `OpenAI_APIKey`.
+- The `ezgpt` library assumes that the OpenAI API key is set in the environment variable `OPENAI_API_KEY` or has been passed using `ezgpt.set_api_key(api_key)`.
 - The `gpt` class maintains a history of the conversation in the `previous` attribute, which can be used to provide context for subsequent requests.
