@@ -77,7 +77,8 @@ class gpt:
             self._print_log('assistant', response.choices[0].message.content, '<>')
 
         self.previous = messages
-        self.previous.append(response.choices[0].message)
+        message = response.choices[0].message
+        self.previous.append({'role':message.role,'content':message.content})
 
         return response.choices[0].message.content
 
@@ -235,5 +236,5 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temper
 def convo(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     asyncio.run(conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty))
 
-if __name__ == '__main__':
+if __name__ == '__main__':  
     convo()
