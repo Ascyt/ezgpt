@@ -179,7 +179,7 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, temper
                     new_role = 'assistant' if new_role == 'user' else 'user'
 
                 conv.previous[value] = { 'role': new_role, 'content': arg }
-                reset_conversation()
+                await reset_conversation()
                 return
 
             if prompt == '_': 

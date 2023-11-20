@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
         name='ezgpt',
-        version='0.5.5',
+        version='0.5.6',
         packages=find_packages(),
         description='A simple GPT interface',
         long_description=open('README.md').read(),
