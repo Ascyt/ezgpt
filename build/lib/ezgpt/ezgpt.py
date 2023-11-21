@@ -103,16 +103,20 @@ def reset(model='gpt-3.5-turbo'):
 
 def print_messages(messages):
     for i in range(len(messages)):
-        brackets = '[]' if messages[i]['role'] == 'user' else \
-            ('<>' if messages[i]['role'] == 'assistant' else '{}')
+        _print_message(message=messages[i], i=i)
 
-        lines = messages[i]['content'].split('\n')
+def _print_message(message, i):
+    brackets = '[]' if message['role'] == 'user' else \
+        ('<>' if message['role'] == 'assistant' else '{}')
 
-        prefix = brackets[0] + str(i) + brackets[1] + ' '
+    lines = message['content'].split('\n')
 
-        print(prefix + lines[0])
-        for i in range(1, len(lines)):
-            print((' ' * len(prefix)) + lines[i])
+    prefix = brackets[0] + str(i) + brackets[1] + ' '
+
+    print(prefix + lines[0])
+    for i in range(1, len(lines)):
+        print((' ' * len(prefix)) + lines[i])
+    
 
 async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
@@ -139,7 +143,7 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
         if user != None:
             prompt = user
             user = None
-            print(f'[{len(conv.previous)}] {prompt}')
+            _print_message({'role':'user','content':prompt}, len(conv.previous))
         else:
             prompt = input(f'[{len(conv.previous)}] ')
 
@@ -290,7 +294,7 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
                 prompt = prompt[1:]
 
         response = await conv.get(user=prompt, messages=conv.previous)
-        print(f'<{len(conv.previous) - 1}> ' + response)
+        _print_message({'role':'assistant','content':response}, len(conv.previous) - 1)
 
 def convo(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     asyncio.run(conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty))
