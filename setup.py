@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
         name='ezgpt',
-        version='0.7.2',
+        version='1.0.0',
         packages=find_packages(),
         description='A simple GPT interface',
         long_description=open('README.md').read(),
@@ -12,7 +12,7 @@ setup(
         url='https://github.com/Ascyt/ezgpt',
         license='MIT',
         install_requires=[
-            'openai>=1.0.0'
+            'openai>=1.0.0', 'colorama'
             ],
         classifiers=[
             'Programming Language :: Python :: 3',

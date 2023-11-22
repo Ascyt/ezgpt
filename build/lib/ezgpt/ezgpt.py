@@ -4,12 +4,17 @@ import math
 import json
 import asyncio
 import getpass
+import time
+import colorama
+import sys
 
 try:
     import pyperclip
     has_imported_pyperclip = True
 except ModuleNotFoundError:
     has_imported_pyperclip = False
+
+colorama.init()
 
 client = None
 
@@ -116,14 +121,30 @@ def _print_message(message, i):
     print(prefix + lines[0])
     for i in range(1, len(lines)):
         print((' ' * len(prefix)) + lines[i])
-    
 
-async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+async def _wait_for_response():
+    start_time = time.time()
+    while True:
+        print(f"( Generating... [{math.floor((time.time() - start_time) * 10) / 10}s] )")
+        await asyncio.sleep(0.1)
+        sys.stdout.write("\033[F")  # Cursor up one line
+        sys.stdout.write("\033[K")  # Clear to the end of line
+
+
+async def _get_response(conv, prompt):
+    loop = asyncio.get_event_loop()
+    tasks = [loop.create_task(conv.get(user=prompt, messages=conv.previous)), loop.create_task(_wait_for_response())]
+
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    for task in done:
+        return task.result()
+
+
+def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
     if messages != None:
         conv.previous = messages
     
-    print('Conversation started. Type ? for a list of commands.\n')
 
     if len(conv.previous) > 0 and conv.previous[0]['role'] == 'system':
         system = conv.previous[0]['content']
@@ -134,6 +155,8 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
     
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
+
+        print('Conversation started. Type ? for a list of commands.\n')
         print_messages(messages=((conv.previous + [additional_message]) if additional_message != None else conv.previous))
 
     reprint_conversation()
@@ -185,7 +208,6 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
 
                     exec(arg)
                     print(f'( Executed `{arg}` )')
-                    reprint_conversation()
                     continue
 
                 elif prompt[0] == '+':
@@ -293,11 +315,35 @@ async def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=N
             else:
                 prompt = prompt[1:]
 
-        response = await conv.get(user=prompt, messages=conv.previous)
-        _print_message({'role':'assistant','content':response}, len(conv.previous) - 1)
+        cancel_sending = False
+        continue_loop = True
+        while continue_loop:
+            try:
+                response = asyncio.run(_get_response(conv, prompt))
+                continue_loop = False
+            except KeyboardInterrupt:
+                conv.previous = conv.previous[:-1]
+                arg = ''
+                while True:
+                    arg = input('Resend message? (Y/n): ')
+                    if len(arg) == 0:
+                        arg = 'y'
 
-def convo(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
-    asyncio.run(conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty))
+                    arg = arg[0].lower()
+
+                    if arg == 'n':
+                        cancel_sending = True
+                        continue_loop = False
+                        break
+                    if arg == 'y':
+                        continue_loop = True
+                        break
+    
+        if not cancel_sending:
+            _print_message({'role':'assistant','content':response}, len(conv.previous) - 1)
+
+def c(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
 
 if __name__ == '__main__':  
-    convo()
+    c()
