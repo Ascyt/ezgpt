@@ -7,6 +7,7 @@ import getpass
 import time
 import colorama
 import sys
+import re
 
 try:
     import pyperclip
@@ -187,6 +188,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[~] Change message at index (double ~ for reverse role)')
                 print('\t[&] Re-generate last GPT message')
                 print('\t[@] Copy last message to clipboard')
+                print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
@@ -301,7 +303,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     conv.previous = conv.previous[:-2]
                     reprint_conversation(additional_message={'role':'user','content':prompt})
 
-                elif prompt == '@' or prompt == '@@':
+                elif prompt[0] == '@':
                     global has_imported_pyperclip
 
                     if not has_imported_pyperclip:
@@ -313,6 +315,25 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         pyperclip.copy(content)
                         print('( Copied last message to clipboard )')
                         continue
+                    if prompt[:2] == '@~':
+                        content = conv.previous[-1]['content']
+
+                        index = 0
+                        if len(prompt) > 2:
+                            index = int(prompt[2:]) - 1
+                        
+                        pattern = r"```.*?\n(.*?)```"
+                        code_blocks = re.findall(pattern, content, re.DOTALL)
+
+                        try:
+                            code_block = code_blocks[index]
+
+                            pyperclip.copy(code_block)
+                            print(f'( Copied codeblock {index + 1} )')
+                        except IndexError:
+                            print(f'Error:\n\tNo codeblock {index + 1}')
+                        continue
+
                     if prompt == '@@':
                         content = json.dumps(conv.previous)
                         pyperclip.copy(content)

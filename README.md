@@ -97,10 +97,11 @@ There are special commands you can use:
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
 - `-[index]`: Remove message at index (double `-` for clear everything)
     - *Example: `-0` will remove the first message*
-- `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need an message argument.
+- `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need a message argument.
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
 - `&`: Re-generates the last message GPT sent. 
 - `@`: Copy last message to clipboard (requires `pyperclip` module)
+- `@~<index>`: Copy codeblock. Index starts and defaults to `1` (first codeblock).
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
