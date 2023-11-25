@@ -17,10 +17,13 @@ except ModuleNotFoundError:
 colorama.init()
 
 client = None
+api_key = None
 
-def set_api_key(api_key):
+def set_api_key(key):
     global client
-    client = openai.AsyncOpenAI(api_key=api_key)
+    client = openai.AsyncOpenAI(api_key=key)
+    global api_key
+    api_key = key
 
 class gpt:
     def __init__(self, model='gpt-3.5-turbo', system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0, logs=False):
@@ -48,13 +51,16 @@ class gpt:
 
     async def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
         global client
-        if client is None:
-            try:
+        global api_key
+        try:
+            if api_key == None:
                 client = openai.AsyncOpenAI()
-            except openai.OpenAIError:
-                print('No API key found in \"OPENAI_API_KEY\" environment variable.')
-                print('You can input your API key here instead, though this is not recommended:')
-                client = openai.AsyncOpenAI(api_key=(getpass.getpass('\tOpenAI API Key:')))
+            else:
+                client = openai.AsyncOpenAI(api_key=api_key)
+        except openai.OpenAIError:
+            print('No API key found in \"OPENAI_API_KEY\" environment variable.')
+            print('You can input your API key here instead, though this is not recommended:')
+            client = openai.AsyncOpenAI(api_key=(getpass.getpass('\tOpenAI API Key:')))
 
         if messages is None:
             messages = []
