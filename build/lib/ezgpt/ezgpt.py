@@ -212,20 +212,37 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                 elif prompt[0] == '#':
                     space = prompt.find(' ')
-                    arg = f'conv.{prompt[1:space]}={prompt[space+1:]}'
 
-                    exec(arg)
-                    print(f'( Executed `{arg}` )')
+                    if space == -1:
+                        print('Error:\n\tNo argument.')
+                        continue
+
+                    prop = prompt[1:space]
+                    value = prompt[space+1:]
+                    arg = f'conv.{prop}={value}'
+
+                    try:
+                        exec(arg)
+                        print(f'( Executed `{arg}` )')
+                    except SyntaxError:
+                        print(f'Error:\n\t`{prop}` is not a valid property.')
+                    except (NameError, TypeError):
+                        print(f'Error:\n\t`{value}` is not a valid value.')
+                        print(f'( Hint: Encapsulate strings in quotes (") )')
                     continue
 
                 elif prompt[0] == '+':
                     space = prompt.find(' ')
                     is_assistant = len(prompt) > 1 and prompt[1] == '+'
-                    value = int(prompt[(2 if is_assistant else 1):space])
                     arg = prompt[space+1:]
+                    valueString = prompt[(2 if is_assistant else 1):space]
 
-                    conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
-                    reprint_conversation()
+                    try:
+                        value = int(valueString)
+                        conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
+                        reprint_conversation()
+                    except (IndexError, ValueError):
+                        print(f'Error:\n\t`{valueString}` is not valid.')
                     continue
                 
                 elif prompt[0] == '-':
@@ -236,19 +253,32 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         reprint_conversation()
                         continue
 
-                    value = int(prompt[1:])
+                    try:
+                        value = int(prompt[1:])
 
-                    conv.previous.pop(value)
-                    reprint_conversation()
+                        conv.previous.pop(value)
+                        reprint_conversation()
+                    except (IndexError, ValueError):
+                        print(f'Error:\n\t`{prompt[1:]}` is not valid.')
                     continue
+                
 
                 elif prompt[0] == '~':
                     space = prompt.find(' ')
                     change_role = len(prompt) > 1 and prompt[1] == '~'
-                    value = int(prompt[2:] if space == -1 else \
-                                 prompt[(2 if change_role else 1):space])
+                    try:
+                        value = int(prompt[2:] if space == -1 else \
+                                    prompt[(2 if change_role else 1):space])
+                    except ValueError:
+                        print(f'Error:\n\tInvalid value.')
+                        continue
 
-                    new_role = conv.previous[value]['role']
+
+                    try:
+                        new_role = conv.previous[value]['role']
+                    except IndexError:
+                        print(f'Error:\n\tNo message with index {value}.')
+                        continue
                     if change_role:
                         new_role = 'assistant' if new_role == 'user' else 'user'
                     
@@ -316,16 +346,16 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         print('( Copied last message to clipboard )')
                         continue
                     if prompt[:2] == '@~':
-                        content = conv.previous[-1]['content']
-
                         index = 0
-                        if len(prompt) > 2:
-                            index = int(prompt[2:]) - 1
-                        
-                        pattern = r"```.*?\n(.*?)```"
-                        code_blocks = re.findall(pattern, content, re.DOTALL)
-
                         try:
+                            content = conv.previous[-1]['content']
+
+                            if len(prompt) > 2:
+                                index = int(prompt[2:]) - 1
+                            
+                            pattern = r"```.*?\n(.*?)```"
+                            code_blocks = re.findall(pattern, content, re.DOTALL)
+
                             code_block = code_blocks[index]
 
                             pyperclip.copy(code_block)
