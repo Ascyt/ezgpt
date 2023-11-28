@@ -367,16 +367,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     if not has_imported_pyperclip:
                         print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
                         continue
-                    
-                    if prompt == '@':
-                        if len(conv.previous) == 0:
-                            print('Error:\n\tNo previous line.')
-                            continue
-                        content = conv.previous[-1]['content']
+
+                    if prompt == '@@':
+                        content = json.dumps(conv.previous)
                         pyperclip.copy(content)
-                        print('( Copied last message to clipboard )')
+                        print('( Copied JSON to clipboard )')
                         continue
-                    if prompt[:2] == '@~':
+                    
+                    if len(prompt) >= 2 and prompt[:2] == '@~':
                         index = 0
                         try:
                             content = conv.previous[-1]['content']
@@ -395,11 +393,30 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             print(f'Error:\n\tNo codeblock {index + 1}')
                         continue
 
-                    if prompt == '@@':
-                        content = json.dumps(conv.previous)
+                    if prompt[0] == '@':
+                        if len(conv.previous) == 0:
+                            print('Error:\n\tNo lines')
+                            continue
+
+                        index = -1
+                        try:
+                            if len(prompt) > 1:
+                                index = int(prompt[1:]) 
+                            content = conv.previous[index]['content']
+                        except (IndexError, ValueError):
+                            print(f'Error: `{prompt[1:]}` is not a valid index')
+                            continue
+
                         pyperclip.copy(content)
-                        print('( Copied JSON to clipboard )')
+                        if index == -1:
+                            print('( Copied last message to clipboard )')
+                        else:
+                            print(f'( Copied message {index} to clipboard )')
                         continue
+
+                    print('Error:\n\tInvalid @ command')
+                    continue
+
             else:
                 prompt = prompt[1:]
 

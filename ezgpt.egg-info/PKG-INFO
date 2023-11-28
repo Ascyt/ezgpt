@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 1.2.1
+Version: 1.3.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -116,7 +116,7 @@ There are special commands you can use:
 - `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need a message argument.
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
 - `&`: Re-generates the last message GPT sent. 
-- `@`: Copy last message to clipboard (requires `pyperclip` module)
+- `@<index>`: Copy message at index (defaults to last message) to clipboard (requires `pyperclip` module)
 - `@~<index>`: Copy codeblock. Index starts and defaults to `1` (first codeblock).
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
