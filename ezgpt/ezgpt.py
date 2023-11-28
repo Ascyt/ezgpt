@@ -146,6 +146,18 @@ async def _get_response(conv, prompt):
     for task in done:
         return task.result()
 
+def _get_boolean_input(message:str, default_value:bool):
+    while True:
+        arg = input(message)
+        if len(arg) == 0:
+            return default_value
+
+        arg = arg[0].lower()
+
+        if arg == 'n':
+            return False
+        if arg == 'y':
+            return True
 
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
@@ -259,7 +271,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         conv.previous.pop(value)
                         reprint_conversation()
                     except (IndexError, ValueError):
-                        print(f'Error:\n\t`{prompt[1:]}` is not valid.')
+                        print(f'Error:\n\t`{prompt[1:]}` is not a valid index.')
                     continue
                 
 
@@ -303,27 +315,43 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     prompt = ''
                     line_number = 1
 
-                    while True:
-                        new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
-                        if new_line == '\x18':
-                            break
-                        if new_line == '\x15':
-                            previous_line = prompt[:-1].rfind('\n')
-                            if previous_line == -1:
-                                print('Error:\n\tNo previous line')
+                    try:
+                        while True:
+                            new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
+                            if new_line == '\x18':
+                                break
+                            if new_line == '\x15':
+                                previous_line = prompt[:-1].rfind('\n')
+                                if previous_line == -1:
+                                    if prompt != '':
+                                        previous_line = prompt[:-1].find('\n')
+                                    else:
+                                        print('Error:\n\tNo previous line')
+                                        continue
+
+                                prompt = prompt[:(previous_line + 1)]
+                                line_number -= 1
+
+                                print('( Removed previous line )')
+
                                 continue
-
-                            prompt = prompt[:(previous_line + 1)]
-                            line_number -= 1
-
-                            print('( Removed previous line )')
-
-                            continue
-                        prompt += new_line + '\n'
-                        line_number += 1
+                            prompt += new_line + '\n'
+                            line_number += 1
+                    except KeyboardInterrupt:
+                        print()
+                        print('( Cancelled multi-line )')
+                        continue
 
                     prompt = prompt[:-1]
+
                     print('( Ended multi-line )')
+
+                    send_message = True
+                    if prompt == '':
+                        send_message = _get_boolean_input('Body is empty. Send anyways? (Y/n): ', True)
+
+                    if not send_message:
+                        continue
                 
                 elif prompt == '&':
                     if len(conv.previous) < 2 or conv.previous[-1]['role'] != 'assistant':
@@ -373,28 +401,19 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 prompt = prompt[1:]
 
         cancel_sending = False
-        continue_loop = True
-        while continue_loop:
+        while True:
             try:
                 response = asyncio.run(_get_response(conv, prompt))
-                continue_loop = False
+                break
             except KeyboardInterrupt:
                 conv.previous = conv.previous[:-1]
                 arg = ''
-                while True:
-                    arg = input('Resend message? (Y/n): ')
-                    if len(arg) == 0:
-                        arg = 'y'
 
-                    arg = arg[0].lower()
+                if _get_boolean_input('Resend message? (Y/n): ', True):
+                    continue
 
-                    if arg == 'n':
-                        cancel_sending = True
-                        continue_loop = False
-                        break
-                    if arg == 'y':
-                        continue_loop = True
-                        break
+                cancel_sending = True
+                break
     
         if not cancel_sending:
             _print_message({'role':'assistant','content':response}, len(conv.previous) - 1)
