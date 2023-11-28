@@ -196,15 +196,15 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[:] Run Python command')
                 print('\t[#] Set GPT\'s property')
                 print('\t[+] Insert message before index (double + for assistant)')
-                print('\t[-] Remove message at index')
+                print('\t[-] Remove message at index (double - for clear conversation)')
                 print('\t[~] Change message at index (double ~ for reverse role)')
                 print('\t[&] Re-generate last GPT message')
-                print('\t[@] Copy last message to clipboard')
+                print('\t[@] Copy message to clipboard')
                 print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
-                print('\t[_] Multiline (Ctrl+X with Enter to exit)')
+                print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)')
                 continue
 
             
