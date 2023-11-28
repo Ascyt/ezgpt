@@ -106,7 +106,7 @@ There are special commands you can use:
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
     - *Example: `\- Hello` will add message `- Hello`*
-- `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+U` with `Enter` to remove previous line.
+- `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+C` to cancel, `Ctrl+U` with `Enter` to remove previous line.
 
 A shorthand to start `conversation` is using the `ezgpt.c()` static function. While generating, you can use `Ctrl+C` to cancel or resend.
 

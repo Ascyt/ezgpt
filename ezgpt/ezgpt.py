@@ -369,6 +369,9 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
                     
                     if prompt == '@':
+                        if len(conv.previous) == 0:
+                            print('Error:\n\tNo previous line.')
+                            continue
                         content = conv.previous[-1]['content']
                         pyperclip.copy(content)
                         print('( Copied last message to clipboard )')
