@@ -69,8 +69,11 @@ class gpt:
         if system is None:
             system = self.system
 
+        use_system_property = False
+
         if system is not None:
             messages.insert(0, {'role': 'system', 'content': system})
+            use_system_property = True
         if user is not None:
             messages.append({'role': 'user', 'content': user})
 
@@ -99,6 +102,9 @@ class gpt:
             self._print_log('assistant', response.choices[0].message.content, '<>')
 
         self.previous = messages
+        if use_system_property:
+            self.previous = self.previous[1:]
+
         message = response.choices[0].message
         self.previous.append({'role':message.role,'content':message.content})
 
@@ -113,7 +119,14 @@ def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
 
-def print_messages(messages):
+def print_messages(conv, additional_messages=None):
+    if conv.system != None:
+        print('{SYS} ' + conv.system)
+
+    messages = conv.previous.copy()
+    if additional_messages != None:
+        messages += additional_messages
+
     for i in range(len(messages)):
         _print_message(message=messages[i], i=i)
 
@@ -166,17 +179,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     
 
     if len(conv.previous) > 0 and conv.previous[0]['role'] == 'system':
-        system = conv.previous[0]['content']
+        conv.system = conv.previous[0]['content']
         conv.previous.pop(0)
-
-    if system != None:
-        print('{SYS} ' + system)
     
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
         print('Conversation started. Type ? for a list of commands.\n')
-        print_messages(messages=((conv.previous + [additional_message]) if additional_message != None else conv.previous))
+        print_messages(conv=conv, additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
         
@@ -195,6 +205,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[!] Exit conversation')
                 print('\t[:] Run Python command')
                 print('\t[#] Set GPT\'s property')
+                print('\t[$] Set system message')
                 print('\t[+] Insert message before index (double + for assistant)')
                 print('\t[-] Remove message at index (double - for clear conversation)')
                 print('\t[~] Change message at index (double ~ for reverse role)')
@@ -241,6 +252,12 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     except (NameError, TypeError):
                         print(f'Error:\n\t`{value}` is not a valid value.')
                         print(f'( Hint: Encapsulate strings in quotes (") )')
+                    continue
+
+                elif prompt[0] == '$':
+                    conv.system = prompt[1:]
+
+                    reprint_conversation()
                     continue
 
                 elif prompt[0] == '+':

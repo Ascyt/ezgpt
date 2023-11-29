@@ -70,7 +70,7 @@ If you don't care about any classes or instances, you can also just use the stat
 await ezgpt.get('Hello!') 
 # 'Hello! How can I assist you today?'
 ```
-Aside the normal GPT arguments, there's another boolean `use_previous()` to use the previous conversation:
+Aside the normal GPT arguments, there's another boolean `use_previous` to use the previous conversation:
 ```python
 await ezgpt.get('What was my previous message?', True) 
 # 'Your previous message was "Hello".'
@@ -93,6 +93,7 @@ There are special commands you can use:
     -   *Example: `:print('hello')`* will print `hello`
 - `#[property] [value]`: Set GPT's property, such as `model`. Remember to use `'` for strings. 
     - *Example: `#model 'gpt-4'`* will set the model to `'gpt-4'`
+- `$[message]`: Set the system message.
 - `+[index] [message]`: Insert message before index (double `+` for assistant instead of user)
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
 - `-[index]`: Remove message at index (double `-` for clear everything)
