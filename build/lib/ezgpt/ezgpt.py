@@ -255,7 +255,9 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt[0] == '$':
-                    conv.system = prompt[1:]
+                    message = prompt[1:] if len(prompt) > 1 else None
+
+                    conv.system = message
 
                     reprint_conversation()
                     continue

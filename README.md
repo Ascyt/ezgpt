@@ -93,7 +93,7 @@ There are special commands you can use:
     -   *Example: `:print('hello')`* will print `hello`
 - `#[property] [value]`: Set GPT's property, such as `model`. Remember to use `'` for strings. 
     - *Example: `#model 'gpt-4'`* will set the model to `'gpt-4'`
-- `$[message]`: Set the system message.
+- `$[message]`: Set the system message. Leave message empty to remove.
 - `+[index] [message]`: Insert message before index (double `+` for assistant instead of user)
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
 - `-[index]`: Remove message at index (double `-` for clear everything)
