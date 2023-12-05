@@ -26,6 +26,15 @@ def set_api_key(key):
     global api_key
     api_key = key
 
+def _trim_at_higher_length(text, max_length):
+    stop_at_index = text.find('\n') 
+    if stop_at_index == -1 or stop_at_index > max_length:
+        stop_at_index = max_length
+    
+    if len(text) > stop_at_index:
+        text = text[:stop_at_index] + '...'
+    return text
+
 class gpt:
     def __init__(self, model='gpt-3.5-turbo', system=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0, logs=False):
         self.model = model
@@ -39,13 +48,7 @@ class gpt:
         self.logs = logs
 
     def _print_log(self, role, content, brackets):
-        MAX_LENGTH = 100
-        stop_at_index = content.find('\n') 
-        if stop_at_index == -1 or stop_at_index > MAX_LENGTH:
-            stop_at_index = MAX_LENGTH    
-        
-        if len(content) > stop_at_index:
-            content = content[:stop_at_index] + '...'
+        content = _trim_at_higher_length(content, 100)
         
         spaces = (12 - len(role)) / 2
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
@@ -119,7 +122,7 @@ def reset(model='gpt-3.5-turbo'):
     staticGpt.previous = []
     staticGpt.model = model
 
-def print_messages(conv, additional_messages=None):
+def print_messages(conv, shorten_messages, additional_messages=None):
     if conv.system != None:
         print('{SYS} ' + conv.system)
 
@@ -128,15 +131,21 @@ def print_messages(conv, additional_messages=None):
         messages += additional_messages
 
     for i in range(len(messages)):
-        _print_message(message=messages[i], i=i)
+        _print_message(message=messages[i], shorten_message=shorten_messages, i=i)
 
-def _print_message(message, i):
+def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
         ('<>' if message['role'] == 'assistant' else '{}')
 
-    lines = message['content'].split('\n')
 
     prefix = brackets[0] + str(i) + brackets[1] + ' '
+
+    if shorten_message:
+        content = _trim_at_higher_length(message['content'], 100)
+        print(prefix + content)
+        return
+
+    lines = message['content'].split('\n')
 
     print(prefix + lines[0])
     for i in range(1, len(lines)):
@@ -181,12 +190,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     if len(conv.previous) > 0 and conv.previous[0]['role'] == 'system':
         conv.system = conv.previous[0]['content']
         conv.previous.pop(0)
+
+    full_view = True
     
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
         print('Conversation started. Type ? for a list of commands.\n')
-        print_messages(conv=conv, additional_messages=None if additional_message == None else [additional_message])
+        print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
         
@@ -213,6 +224,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[@] Copy message to clipboard')
                 print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
+                print('\t[=] Switch between full and shortened view')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)')
@@ -226,6 +238,11 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
             if prompt[0] != '\\':
                 if prompt == '!':
                     return
+
+                if prompt == '=':
+                    full_view = not full_view
+                    reprint_conversation()
+                    continue
 
                 elif prompt[0] == ':':
                     arg = prompt[1:]
@@ -455,7 +472,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 break
     
         if not cancel_sending:
-            _print_message({'role':'assistant','content':response}, len(conv.previous) - 1)
+            _print_message({'role':'assistant','content':response}, (not full_view), len(conv.previous) - 1)
 
 def c(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)

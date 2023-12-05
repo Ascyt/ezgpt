@@ -104,6 +104,7 @@ There are special commands you can use:
 - `@<index>`: Copy message at index (defaults to last message) to clipboard (requires `pyperclip` module)
 - `@~<index>`: Copy codeblock. Index starts and defaults to `1` (first codeblock).
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
+- `=`: Switch between full view and shortened view. Shortened view will only contain the first line up to 100 characters for easy readability. 
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
     - *Example: `\- Hello` will add message `- Hello`*

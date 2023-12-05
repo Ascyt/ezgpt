@@ -2,13 +2,13 @@ from setuptools import setup, find_packages
 
 setup(
         name='ezgpt',
-        version='1.5.0',
+        version='1.6.0',
         packages=find_packages(),
         description='A simple GPT interface',
         long_description=open('README.md').read(),
         long_description_content_type='text/markdown',
         author='Filip Schauer',
-        author_email='filip@schauer.com',
+        author_email='contact@ascyt.com',
         url='https://github.com/Ascyt/ezgpt',
         license='MIT',
         install_requires=[
