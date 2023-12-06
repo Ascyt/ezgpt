@@ -90,6 +90,7 @@ class gpt:
         if self.logs:
           for message in messages:
               self._print_log(message['role'], message['content'], '[]')
+
         
         response = await client.chat.completions.create(
             model=self.model,
@@ -215,7 +216,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[?] View list of commands')
                 print('\t[!] Exit conversation')
                 print('\t[:] Run Python command')
-                print('\t[#] Set GPT\'s property')
+                print('\t[#] Set GPT\'s property (no argument to list properties, [?#] for list of properties, [##] to reset)')
                 print('\t[$] Set system message')
                 print('\t[+] Insert message before index (double + for assistant)')
                 print('\t[-] Remove message at index (double - for clear conversation)')
@@ -229,7 +230,30 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[\\] Override command')
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)')
                 continue
-
+            elif prompt == '?#':
+                print('(#) Command help:')
+                print('\t[model] / [m] The model to generate the completion')
+                print('\t[temperature] / [temp] Controls randomness (0-2)')
+                print('\t[max_tokens] / [max] The maximum number of tokens to generate')
+                print('\t[top_p] / [top] Controls diversity via nucleus sampling (0-1)')
+                print('\t[frequency_penalty] / [fp] Decreases token repetition (0-2)')
+                print('\t[presence_penalty] / [pp] Increases likelihood of new topics (0-2)')
+                continue
+            elif prompt == '#':
+                values = (('model', conv.model), ('temperature', conv.temperature), ('max_tokens', conv.max_tokens), ('top_p', conv.top_p), ('frequency_penalty', conv.frequency_penalty), ('presence_penalty', conv.presence_penalty))
+                print('(#) Properties:')
+                for element in values:
+                    print(f'\t{element[0]}: {element[1]}')
+                continue
+            elif prompt == '##':
+                conv.model = 'gpt-3.5-turbo'
+                conv.temperature = 0
+                conv.max_tokens = 2048
+                conv.top_p = 0
+                conv.frequency_penalty = 0
+                conv.presence_penalty = 0
+                print('( Reset all properties )')
+                continue
             
             if prompt == '':
                 reprint_conversation()
@@ -259,16 +283,31 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                     prop = prompt[1:space]
                     value = prompt[space+1:]
-                    arg = f'conv.{prop}={value}'
 
                     try:
-                        exec(arg)
-                        print(f'( Executed `{arg}` )')
-                    except SyntaxError:
-                        print(f'Error:\n\t`{prop}` is not a valid property.')
-                    except (NameError, TypeError):
+                        match prop:
+                            case 'model' | 'm':
+                                conv.model = value
+                            case 'temperature' | 'temp':
+                                conv.temperature = float(value)
+                            case 'max_tokens' | 'max':
+                                conv.max_tokens = int(value)
+                            case 'top_p' | 'top':
+                                conv.top_p = float(value)
+                            case 'frequency_penalty' | 'fp':
+                                conv.frequency_penalty = float(value)
+                            case 'presence_penalty' | 'pp':
+                                conv.presence_penalty = float(value)
+                            case _:
+                                print(f'Error:\n\t`{prop}` is not a valid property.')
+                                continue
+                    except ValueError:
                         print(f'Error:\n\t`{value}` is not a valid value.')
-                        print(f'( Hint: Encapsulate strings in quotes (") )')
+                        continue
+                
+
+                    print(' ( Successfully set property ) ')
+
                     continue
 
                 elif prompt[0] == '$':
@@ -468,6 +507,11 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 if _get_boolean_input('Resend message? (Y/n): ', True):
                     continue
 
+                cancel_sending = True
+                break
+            except openai.OpenAIError as e:
+                print('OpenAI Error:\n\t' + e.message)
+                conv.previous = conv.previous[:-1]
                 cancel_sending = True
                 break
     

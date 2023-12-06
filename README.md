@@ -91,8 +91,8 @@ There are special commands you can use:
 - `!`: Exit the conversation
 - `:[command]`: Run Python command: This will execute everything after the `:` as a line of Python. 
     -   *Example: `:print('hello')`* will print `hello`
-- `#[property] [value]`: Set GPT's property, such as `model`. Remember to use `'` for strings. 
-    - *Example: `#model 'gpt-4'`* will set the model to `'gpt-4'`
+- `#[property] [value]`: Set GPT's property, such as `model`. Use just `#` to list all properties. Use `##` to reset all properties. Use `?#` for help.
+    - *Example: `#model gpt-4`* will set the model to `gpt-4`
 - `$[message]`: Set the system message. Leave message empty to remove.
 - `+[index] [message]`: Insert message before index (double `+` for assistant instead of user)
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
