@@ -26,13 +26,13 @@ def set_api_key(key):
     global api_key
     api_key = key
 
-def _trim_at_higher_length(text, max_length):
+def _trim_at_higher_length(text, max_length, color=colorama.Fore.LIGHTBLACK_EX):
     stop_at_index = text.find('\n') 
     if stop_at_index == -1 or stop_at_index > max_length:
         stop_at_index = max_length
     
     if len(text) > stop_at_index:
-        text = text[:stop_at_index] + '...'
+        text = text[:stop_at_index] + color + '...' + colorama.Style.RESET_ALL
     return text
 
 class gpt:
@@ -134,28 +134,39 @@ def print_messages(conv, shorten_messages, additional_messages=None):
     for i in range(len(messages)):
         _print_message(message=messages[i], shorten_message=shorten_messages, i=i)
 
+def _print_error(msg):
+    print(colorama.Fore.RED + 'Error:\n\t' + msg + colorama.Style.RESET_ALL)
+
+def _print_info(msg):
+    print(colorama.Fore.LIGHTCYAN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
+
 def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
         ('<>' if message['role'] == 'assistant' else '{}')
 
+    lighter_color = colorama.Style.RESET_ALL if message['role'] == 'assistant' else colorama.Fore.LIGHTBLUE_EX
+    darker_color = colorama.Fore.LIGHTBLACK_EX if message['role'] == 'assistant' else colorama.Fore.BLUE
 
-    prefix = brackets[0] + str(i) + brackets[1] + ' '
+    prefix = darker_color + brackets[0] + str(i) + brackets[1] + lighter_color + ' '
 
     if shorten_message:
-        content = _trim_at_higher_length(message['content'], 100)
-        print(prefix + content)
+        content = _trim_at_higher_length(message['content'], 100, color=darker_color)
+        print(prefix + content + colorama.Style.RESET_ALL)
         return
 
     lines = message['content'].split('\n')
 
     print(prefix + lines[0])
     for i in range(1, len(lines)):
-        print((' ' * len(prefix)) + lines[i])
+        print((' ' * (len(str(i)) + 3)) + lines[i])
+
+    print(colorama.Style.RESET_ALL, end='')
+    
 
 async def _wait_for_response():
     start_time = time.time()
     while True:
-        print(f"( Generating... [{math.floor((time.time() - start_time) * 10) / 10}s] )")
+        _print_info(f"Generating... [{math.floor((time.time() - start_time) * 10) / 10}s]")
         await asyncio.sleep(0.1)
         sys.stdout.write("\033[F")  # Cursor up one line
         sys.stdout.write("\033[K")  # Clear to the end of line
@@ -197,7 +208,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
-        print('Conversation started. Type ? for a list of commands.\n')
+        print(colorama.Fore.LIGHTCYAN_EX + 'Conversation started. Type ? for a list of commands.\n' + colorama.Style.RESET_ALL)
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
@@ -209,10 +220,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
             user = None
             _print_message({'role':'user','content':prompt}, len(conv.previous))
         else:
-            prompt = input(f'[{len(conv.previous)}] ')
+            prompt = input(colorama.Fore.BLUE + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTBLUE_EX)
 
             if prompt == '?':
-                print('Commands:')
+                print(colorama.Fore.LIGHTCYAN_EX + 'Commands:')
                 print('\t[?] View list of commands')
                 print('\t[!] Exit conversation')
                 print('\t[:] Run Python command')
@@ -228,22 +239,23 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[=] Switch between full and shortened view')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
-                print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)')
+                print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)' + colorama.Style.RESET_ALL)
                 continue
             elif prompt == '?#':
-                print('(#) Command help:')
+                print(colorama.Fore.LIGHTCYAN_EX + '(#) Command help:')
                 print('\t[model] / [m] The model to generate the completion')
                 print('\t[temperature] / [temp] Controls randomness (0-2)')
                 print('\t[max_tokens] / [max] The maximum number of tokens to generate')
                 print('\t[top_p] / [top] Controls diversity via nucleus sampling (0-1)')
                 print('\t[frequency_penalty] / [fp] Decreases token repetition (0-2)')
-                print('\t[presence_penalty] / [pp] Increases likelihood of new topics (0-2)')
+                print('\t[presence_penalty] / [pp] Increases likelihood of new topics (0-2)' + colorama.Style.RESET_ALL)
                 continue
             elif prompt == '#':
                 values = (('model', conv.model), ('temperature', conv.temperature), ('max_tokens', conv.max_tokens), ('top_p', conv.top_p), ('frequency_penalty', conv.frequency_penalty), ('presence_penalty', conv.presence_penalty))
-                print('(#) Properties:')
+                print(colorama.Fore.LIGHTCYAN_EX + '(#) Properties:')
                 for element in values:
                     print(f'\t{element[0]}: {element[1]}')
+                print(colorama.Style.RESET_ALL, end='')
                 continue
             elif prompt == '##':
                 conv.model = 'gpt-3.5-turbo'
@@ -252,7 +264,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 conv.top_p = 0
                 conv.frequency_penalty = 0
                 conv.presence_penalty = 0
-                print('( Reset all properties )')
+                _print_info('Reset all properties')
                 continue
             
             if prompt == '':
@@ -271,14 +283,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 elif prompt[0] == ':':
                     arg = prompt[1:]
                     exec(arg)
-                    print(f'( Executed `{arg}` )')
+                    _print_info(f'Executed `{arg}`')
                     continue
 
                 elif prompt[0] == '#':
                     space = prompt.find(' ')
 
                     if space == -1:
-                        print('Error:\n\tNo argument.')
+                        _print_error('No argument.')
                         continue
 
                     prop = prompt[1:space]
@@ -299,14 +311,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             case 'presence_penalty' | 'pp':
                                 conv.presence_penalty = float(value)
                             case _:
-                                print(f'Error:\n\t`{prop}` is not a valid property.')
+                                _print_error(f'`{prop}` is not a valid property.')
                                 continue
                     except ValueError:
-                        print(f'Error:\n\t`{value}` is not a valid value.')
+                        _print_error(f'`{value}` is not a valid value.')
                         continue
                 
 
-                    print(' ( Successfully set property ) ')
+                    _print_info('Successfully set property')
 
                     continue
 
@@ -329,7 +341,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
                         reprint_conversation()
                     except (IndexError, ValueError):
-                        print(f'Error:\n\t`{valueString}` is not valid.')
+                        _print_error(f'`{valueString}` is not valid.')
                     continue
                 
                 elif prompt[0] == '-':
@@ -346,7 +358,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         conv.previous.pop(value)
                         reprint_conversation()
                     except (IndexError, ValueError):
-                        print(f'Error:\n\t`{prompt[1:]}` is not a valid index.')
+                        _print_error(f'`{prompt[1:]}` is not a valid index.')
                     continue
                 
 
@@ -357,14 +369,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         value = int(prompt[2:] if space == -1 else \
                                     prompt[(2 if change_role else 1):space])
                     except ValueError:
-                        print(f'Error:\n\tInvalid value.')
+                        _print_error(f'Invalid value.')
                         continue
 
 
                     try:
                         new_role = conv.previous[value]['role']
                     except IndexError:
-                        print(f'Error:\n\tNo message with index {value}.')
+                        _print_error(f'No message with index {value}.')
                         continue
                     if change_role:
                         new_role = 'assistant' if new_role == 'user' else 'user'
@@ -374,7 +386,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             conv.previous[value] = {'role': new_role, 'content':conv.previous[value]['content']}
                             reprint_conversation()
                             continue
-                        print('Error:\n\tBody cannot be empty when single ~ used')
+                        _print_error('Body cannot be empty when single ~ used')
                         continue
 
                     arg = prompt[space+1:]
@@ -385,14 +397,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt == '_': 
-                    print('( Started multi-line. ^X to exit. )')
+                    _print_info('Started multi-line. ^X to exit.')
 
                     prompt = ''
                     line_number = 1
 
                     try:
                         while True:
-                            new_line = input((8 - len(str(line_number))) * ' ' + str(line_number) + '> ')
+                            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTBLUE_EX)
                             if new_line == '\x18':
                                 break
                             if new_line == '\x15':
@@ -401,25 +413,25 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                                     if prompt != '':
                                         previous_line = prompt[:-1].find('\n')
                                     else:
-                                        print('Error:\n\tNo previous line')
+                                        _print_error('No previous line')
                                         continue
 
                                 prompt = prompt[:(previous_line + 1)]
                                 line_number -= 1
 
-                                print('( Removed previous line )')
+                                _print_info('Removed previous line')
 
                                 continue
                             prompt += new_line + '\n'
                             line_number += 1
                     except KeyboardInterrupt:
                         print()
-                        print('( Cancelled multi-line )')
+                        _print_info('Cancelled multi-line')
                         continue
 
                     prompt = prompt[:-1]
 
-                    print('( Ended multi-line )')
+                    _print_info('Ended multi-line')
 
                     send_message = True
                     if prompt == '':
@@ -430,7 +442,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 
                 elif prompt == '&':
                     if len(conv.previous) < 1:
-                        print('Error:\n\tNo messages.')
+                        _print_error('No messages.')
                         continue
                     index = -2 if conv.previous[-1]['role'] == 'assistant' else -1
 
@@ -442,13 +454,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     global has_imported_pyperclip
 
                     if not has_imported_pyperclip:
-                        print('Error:\n\tThe pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
+                        _print_error('The pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
                         continue
 
                     if prompt == '@@':
                         content = json.dumps(conv.previous)
                         pyperclip.copy(content)
-                        print('( Copied JSON to clipboard )')
+                        _print_info('Copied JSON to clipboard')
                         continue
                     
                     if len(prompt) >= 2 and prompt[:2] == '@~':
@@ -465,14 +477,14 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             code_block = code_blocks[index]
 
                             pyperclip.copy(code_block)
-                            print(f'( Copied codeblock {index + 1} )')
+                            _print_info(f'Copied codeblock {index + 1}')
                         except IndexError:
-                            print(f'Error:\n\tNo codeblock {index + 1}')
+                            _print_error(f'No codeblock {index + 1}')
                         continue
 
                     if prompt[0] == '@':
                         if len(conv.previous) == 0:
-                            print('Error:\n\tNo lines')
+                            _print_error('No lines')
                             continue
 
                         index = -1
@@ -486,12 +498,12 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                         pyperclip.copy(content)
                         if index == -1:
-                            print('( Copied last message to clipboard )')
+                            _print_info('Copied last message to clipboard')
                         else:
-                            print(f'( Copied message {index} to clipboard )')
+                            _print_info(f'Copied message {index} to clipboard')
                         continue
 
-                    print('Error:\n\tInvalid @ command')
+                    _print_error('Invalid @ command')
                     continue
 
             else:
