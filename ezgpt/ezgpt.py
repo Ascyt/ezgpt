@@ -429,11 +429,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
                 
                 elif prompt == '&':
-                    if len(conv.previous) < 2 or conv.previous[-1]['role'] != 'assistant':
-                        print('Error:\n\tMust have at least two messages and last message must be an assistant message.')
+                    if len(conv.previous) < 1:
+                        print('Error:\n\tNo messages.')
                         continue
-                    prompt = conv.previous[-2]['content']
-                    conv.previous = conv.previous[:-2]
+                    index = -2 if conv.previous[-1]['role'] == 'assistant' else -1
+
+                    prompt = conv.previous[index]['content']
+                    conv.previous = conv.previous[:index]
                     reprint_conversation(additional_message={'role':'user','content':prompt})
 
                 elif prompt[0] == '@':
