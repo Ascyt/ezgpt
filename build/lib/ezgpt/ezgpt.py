@@ -193,11 +193,14 @@ def _get_boolean_input(message:str, default_value:bool):
         if arg == 'y':
             return True
 
+saved_conversations = {}
+
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
+    conversation_name = None
+
     if messages != None:
         conv.previous = messages
-    
 
     if len(conv.previous) > 0 and conv.previous[0]['role'] == 'system':
         conv.system = conv.previous[0]['content']
@@ -236,6 +239,8 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[@] Copy message to clipboard')
                 print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
+                print('\t[^] Save conversation')
+                print('\t[%] Load conversation')
                 print('\t[=] Switch between full and shortened view')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
@@ -361,7 +366,6 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         _print_error(f'`{prompt[1:]}` is not a valid index.')
                     continue
                 
-
                 elif prompt[0] == '~':
                     space = prompt.find(' ')
                     change_role = len(prompt) > 1 and prompt[1] == '~'
@@ -504,6 +508,57 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
 
                     _print_error('Invalid @ command')
+                    continue
+
+                elif prompt[0] == '%':
+                    arg = prompt[1:]
+
+                    if arg == '':
+                        if len(saved_conversations) == 0:
+                            print(colorama.Fore.LIGHTCYAN_EX + 'No saved conversations' + colorama.Style.RESET_ALL)
+                            continue
+
+                        print(colorama.Fore.LIGHTCYAN_EX + 'Saved conversations:')
+                        for key in list(saved_conversations):
+                            print('\t' + key)
+                        print(colorama.Style.RESET_ALL, end='')
+                        continue
+
+                    value = saved_conversations.get(arg)
+
+                    if value == None:
+                        _print_error(f'Conversation "{arg}" not found. Type `%` for a list of saved conversations')
+                        continue
+
+                    conv.previous = value['messages']
+                    model = value['model']
+                    system = value['system']
+                    temperature = value['temperature']
+                    top_p = value['top_p']
+                    max_tokens = value['max_tokens']
+                    frequency_penalty = value['frequency_penalty']
+                    presence_penalty = value['presence_penalty']
+
+                    conversation_name = arg
+
+                    reprint_conversation()
+                    continue
+
+                elif prompt[0] == '^':
+                    arg = prompt[1:]
+                    if conversation_name == None:
+                        if arg == '':
+                            _print_error('Current conversation is not currently saved under a name')
+                            continue
+
+                    if arg == '':
+                        arg = conversation_name
+                    
+                    saved_conversations.setdefault(arg, {'messages': conv.previous, 'model': model, 'system':system, 'temperature':temperature, 'top_p': top_p, 'max_tokens': max_tokens, 'frequency_penalty':frequency_penalty, 'presence_penalty':presence_penalty})
+
+                    conversation_name = arg
+
+                    _print_info(f'Saved conversation as "{arg}"')
                     continue
 
             else:
