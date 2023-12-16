@@ -144,8 +144,8 @@ def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
         ('<>' if message['role'] == 'assistant' else '{}')
 
-    lighter_color = colorama.Style.RESET_ALL if message['role'] == 'assistant' else colorama.Fore.LIGHTCYAN_EX
-    darker_color = colorama.Fore.LIGHTBLACK_EX if message['role'] == 'assistant' else colorama.Fore.CYAN
+    lighter_color = colorama.Fore.LIGHTWHITE_EX if message['role'] == 'assistant' else colorama.Fore.LIGHTCYAN_EX
+    darker_color = colorama.Fore.WHITE if message['role'] == 'assistant' else colorama.Fore.CYAN
 
     prefix = darker_color + brackets[0] + str(i) + brackets[1] + lighter_color + ' '
 
