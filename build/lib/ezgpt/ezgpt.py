@@ -138,14 +138,14 @@ def _print_error(msg):
     print(colorama.Fore.RED + 'Error:\n\t' + msg + colorama.Style.RESET_ALL)
 
 def _print_info(msg):
-    print(colorama.Fore.LIGHTCYAN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.GREEN + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
 
 def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
         ('<>' if message['role'] == 'assistant' else '{}')
 
-    lighter_color = colorama.Style.RESET_ALL if message['role'] == 'assistant' else colorama.Fore.LIGHTBLUE_EX
-    darker_color = colorama.Fore.LIGHTBLACK_EX if message['role'] == 'assistant' else colorama.Fore.BLUE
+    lighter_color = colorama.Style.RESET_ALL if message['role'] == 'assistant' else colorama.Fore.LIGHTCYAN_EX
+    darker_color = colorama.Fore.LIGHTBLACK_EX if message['role'] == 'assistant' else colorama.Fore.CYAN
 
     prefix = darker_color + brackets[0] + str(i) + brackets[1] + lighter_color + ' '
 
@@ -211,7 +211,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
-        print(colorama.Fore.LIGHTCYAN_EX + 'Conversation started. Type ? for a list of commands.\n' + colorama.Style.RESET_ALL)
+        print(colorama.Fore.GREEN + 'Conversation started. Type ? for a list of commands.\n' + colorama.Style.RESET_ALL)
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
@@ -223,10 +223,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
             user = None
             _print_message({'role':'user','content':prompt}, len(conv.previous))
         else:
-            prompt = input(colorama.Fore.BLUE + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTBLUE_EX)
+            prompt = input(colorama.Fore.CYAN + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTCYAN_EX)
 
             if prompt == '?':
-                print(colorama.Fore.LIGHTCYAN_EX + 'Commands:')
+                print(colorama.Fore.GREEN + 'Commands:')
                 print('\t[?] View list of commands')
                 print('\t[!] Exit conversation')
                 print('\t[:] Run Python command')
@@ -247,7 +247,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)' + colorama.Style.RESET_ALL)
                 continue
             elif prompt == '?#':
-                print(colorama.Fore.LIGHTCYAN_EX + '(#) Command help:')
+                print(colorama.Fore.GREEN + '(#) Command help:')
                 print('\t[model] / [m] The model to generate the completion')
                 print('\t[temperature] / [temp] Controls randomness (0-2)')
                 print('\t[max_tokens] / [max] The maximum number of tokens to generate')
@@ -257,7 +257,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 continue
             elif prompt == '#':
                 values = (('model', conv.model), ('temperature', conv.temperature), ('max_tokens', conv.max_tokens), ('top_p', conv.top_p), ('frequency_penalty', conv.frequency_penalty), ('presence_penalty', conv.presence_penalty))
-                print(colorama.Fore.LIGHTCYAN_EX + '(#) Properties:')
+                print(colorama.Fore.GREEN + '(#) Properties:')
                 for element in values:
                     print(f'\t{element[0]}: {element[1]}')
                 print(colorama.Style.RESET_ALL, end='')
@@ -515,10 +515,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                     if arg == '':
                         if len(saved_conversations) == 0:
-                            print(colorama.Fore.LIGHTCYAN_EX + 'No saved conversations' + colorama.Style.RESET_ALL)
+                            print(colorama.Fore.GREEN + 'No saved conversations' + colorama.Style.RESET_ALL)
                             continue
 
-                        print(colorama.Fore.LIGHTCYAN_EX + 'Saved conversations:')
+                        print(colorama.Fore.GREEN + 'Saved conversations:')
                         for key in list(saved_conversations):
                             print('\t' + key)
                         print(colorama.Style.RESET_ALL, end='')
