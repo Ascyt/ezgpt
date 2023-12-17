@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 1.9.2
+Version: 1.10.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -118,8 +118,12 @@ There are special commands you can use:
 - `@<index>`: Copy message at index (defaults to last message) to clipboard (requires `pyperclip` module)
 - `@~<index>`: Copy codeblock. Index starts and defaults to `1` (first codeblock).
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
-- `^<name>`: Save the conversation. Gets cleared after restart. `arg` defaults to the current conversation
+- `^<name>`: Save the conversation. Gets cleared after restart and is only valid for the current session. `arg` defaults to the current conversation
 - `%<name>`: Load the conversation `name`. Use just `%` without arguments to list all saved conversations
+- `^-<name>`: Same as `^<name>` but will remove the conversation instead of saving it
+- `^^<name>`: Same as `^<name>` but will store your conversation on your local filesystem so you can use it between sessions. Saves to `~/.ezgpt_conversations.json`
+- `%%<name>` Same as `%<name>` but will get the conversation from `~/.ezgpt_conversations.json`
+- `^^-<name>` Same as `^-<name>` but for local file system
 - `=`: Switch between full view and shortened view. Shortened view will only contain the first line up to 100 characters for easy readability. 
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.

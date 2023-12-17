@@ -157,8 +157,8 @@ def _print_message(message, shorten_message, i):
     lines = message['content'].split('\n')
 
     print(prefix + lines[0])
-    for i in range(1, len(lines)):
-        print((' ' * (len(str(i)) + 3)) + lines[i])
+    for j in range(1, len(lines)):
+        print((' ' * (len(str(j)) + 3)) + lines[j])
 
     print(colorama.Style.RESET_ALL, end='')
     
@@ -194,6 +194,21 @@ def _get_boolean_input(message:str, default_value:bool):
             return True
 
 saved_conversations = {}
+PERSISTENT_CONVERSATION_PATH = os.path.join(os.path.expanduser('~'), '.ezgpt_conversations.json')
+persistant_saved_conversations = {}
+
+if os.path.exists(PERSISTENT_CONVERSATION_PATH):
+    with open(PERSISTENT_CONVERSATION_PATH, 'r') as file:
+        persistant_saved_conversations = json.load(file)
+
+def save_conversation_persistant(name, conversation):
+    persistant_saved_conversations.setdefault(name, conversation)
+
+    update_persistant()
+
+def update_persistant():
+    with open(PERSISTENT_CONVERSATION_PATH, 'w') as file:
+        json.dump(persistant_saved_conversations, file)
 
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
@@ -232,16 +247,24 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[:] Run Python command')
                 print('\t[#] Set GPT\'s property (no argument to list properties, [?#] for list of properties, [##] to reset)')
                 print('\t[$] Set system message')
+                print('\t')
                 print('\t[+] Insert message before index (double + for assistant)')
                 print('\t[-] Remove message at index (double - for clear conversation)')
                 print('\t[~] Change message at index (double ~ for reverse role)')
-                print('\t[&] Re-generate last GPT message')
+                print('\t')
                 print('\t[@] Copy message to clipboard')
                 print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
+                print('\t')
                 print('\t[^] Save conversation')
                 print('\t[%] Load conversation')
+                print('\t[^-] Remove conversation')
+                print('\t[^^] Save conversation to local filesystem')
+                print('\t[%%] Load conversation from local filesystem')
+                print('\t[^^-] Remove conversation from local filesystem')
+                print('\t')
                 print('\t[=] Switch between full and shortened view')
+                print('\t[&] Re-generate last GPT message')
                 print('\t[] Reload conversation')
                 print('\t[\\] Override command')
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)' + colorama.Style.RESET_ALL)
@@ -511,23 +534,27 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt[0] == '%':
-                    arg = prompt[1:]
+                    from_persistent = len(prompt) > 1 and prompt[1] == '%' 
+
+                    arg = prompt[(2 if from_persistent else 1):]
+
+                    conversation = persistant_saved_conversations if from_persistent else saved_conversations
 
                     if arg == '':
-                        if len(saved_conversations) == 0:
-                            print(colorama.Fore.GREEN + 'No saved conversations' + colorama.Style.RESET_ALL)
+                        if len(conversation) == 0:
+                            print(colorama.Fore.GREEN + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
                             continue
 
-                        print(colorama.Fore.GREEN + 'Saved conversations:')
-                        for key in list(saved_conversations):
+                        print(colorama.Fore.GREEN + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
+                        for key in list(conversation):
                             print('\t' + key)
                         print(colorama.Style.RESET_ALL, end='')
                         continue
 
-                    value = saved_conversations.get(arg)
+                    value = conversation.get(arg)
 
                     if value == None:
-                        _print_error(f'Conversation "{arg}" not found. Type `%` for a list of saved conversations')
+                        _print_error(f'Conversation "{arg}" not found{f" in `{PERSISTENT_CONVERSATION_PATH}`" if from_persistent else ""}. Type `%` for a list of saved conversations or `%%` for a list of persistently saved conversations')
                         continue
 
                     conv.previous = value['messages']
@@ -545,7 +572,21 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt[0] == '^':
-                    arg = prompt[1:]
+                    save_persistant = len(prompt) > 1 and prompt[1] == '^' 
+                    arg = prompt[(2 if save_persistant else 1):]
+
+                    def save_conversation(conversation):
+                        if save_persistant: 
+                            save_conversation_persistant(arg, conversation)
+                            return
+                        saved_conversations.setdefault(arg, conversation)
+                    def delete_conversation():
+                        if save_persistant:
+                            persistant_saved_conversations.pop(arg)
+                            update_persistant()
+                            return
+                        saved_conversations.pop(arg)
+
                     if conversation_name == None:
                         if arg == '':
                             _print_error('Current conversation is not currently saved under a name')
@@ -554,11 +595,22 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     if arg == '':
                         arg = conversation_name
                     
-                    saved_conversations.setdefault(arg, {'messages': conv.previous, 'model': model, 'system':system, 'temperature':temperature, 'top_p': top_p, 'max_tokens': max_tokens, 'frequency_penalty':frequency_penalty, 'presence_penalty':presence_penalty})
+                    delete = False
+                    if arg[0] == '-':
+                        delete = True
+                        arg = arg[1:]
+
+                    if delete:
+                        delete_conversation()
+                        _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
+                        conversation_name = None
+                        continue
+                    
+                    save_conversation({'messages': conv.previous, 'model': model, 'system':system, 'temperature':temperature, 'top_p': top_p, 'max_tokens': max_tokens, 'frequency_penalty':frequency_penalty, 'presence_penalty':presence_penalty})
 
                     conversation_name = arg
 
-                    _print_info(f'Saved conversation as "{arg}"')
+                    _print_info(f'Saved conversation{" in local filesystem" if save_persistant else ""} as "{arg}"')
                     continue
 
             else:
