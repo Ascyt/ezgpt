@@ -125,7 +125,7 @@ def reset(model='gpt-3.5-turbo'):
 
 def print_messages(conv, shorten_messages, additional_messages=None):
     if conv.system != None:
-        print('{SYS} ' + conv.system)
+        _print_message({'role':'system','content':conv.system}, shorten_message=shorten_messages, i=-1)
 
     messages = conv.previous.copy()
     if additional_messages != None:
@@ -144,13 +144,25 @@ def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
         ('<>' if message['role'] == 'assistant' else '{}')
 
-    lighter_color = colorama.Fore.LIGHTWHITE_EX if message['role'] == 'assistant' else colorama.Fore.LIGHTCYAN_EX
-    darker_color = colorama.Fore.WHITE if message['role'] == 'assistant' else colorama.Fore.CYAN
-
-    prefix = darker_color + brackets[0] + str(i) + brackets[1] + lighter_color + ' '
+    match (message['role']):
+        case 'assistant': 
+            light = colorama.Fore.LIGHTWHITE_EX
+            dark = colorama.Fore.WHITE
+        case 'user':
+            light = colorama.Fore.LIGHTCYAN_EX 
+            dark = colorama.Fore.CYAN
+        case 'system':
+            light = colorama.Fore.LIGHTYELLOW_EX
+            dark = colorama.Fore.YELLOW
+        case _:
+            light = colorama.Fore.WHITE
+            dark = colorama.Fore.LIGHTBLACK_EX
+    
+    value = 'S' if (i == -1 and message['role'] == 'system') else str(i)
+    prefix = dark + brackets[0] + value + brackets[1] + light + ' '
 
     if shorten_message:
-        content = _trim_at_higher_length(message['content'], 100, color=darker_color)
+        content = _trim_at_higher_length(message['content'], 100, color=dark)
         print(prefix + content + colorama.Style.RESET_ALL)
         return
 
@@ -158,7 +170,7 @@ def _print_message(message, shorten_message, i):
 
     print(prefix + lines[0])
     for j in range(1, len(lines)):
-        print((' ' * (len(str(j)) + 3)) + lines[j])
+        print((' ' * (len(str(i)) + 3)) + lines[j])
 
     print(colorama.Style.RESET_ALL, end='')
     
@@ -431,7 +443,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                     try:
                         while True:
-                            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTBLUE_EX)
+                            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
                             if new_line == '\x18':
                                 break
                             if new_line == '\x15':
@@ -631,7 +643,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 cancel_sending = True
                 break
             except openai.OpenAIError as e:
-                print('OpenAI Error:\n\t' + e.message)
+                print(colorama.Fore.RED + 'OpenAI Error:\n\t' + e.message + colorama.Style.RESET_ALL)
                 conv.previous = conv.previous[:-1]
                 cancel_sending = True
                 break
