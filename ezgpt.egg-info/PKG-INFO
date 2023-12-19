@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 1.11.1
+Version: 1.12.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -108,11 +108,11 @@ There are special commands you can use:
 - `#[property] [value]`: Set GPT's property, such as `model`. Use just `#` to list all properties. Use `##` to reset all properties. Use `?#` for help.
     - *Example: `#model gpt-4`* will set the model to `gpt-4`
 - `$[message]`: Set the system message. Leave message empty to remove.
-- `+<index> [message]`: Insert message before index (double `+` for assistant instead of user). Index defaults to last message (append)
+- `+<index> [message]`: Insert message before index (double `+` for assistant instead of user). Index defaults to last message (append). Use `_` as `message` for multiline
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
 - `-<index>`: Remove message at index (double `-` for clear everything). Index defaults to last message
     - *Example: `-0` will remove the first message*
-- `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need a message argument.
+- `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need a message argument. Use `_` as `message` for multiline
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*
 - `&`: Re-generates the last message GPT sent. 
 - `@<index>`: Copy message at index (defaults to last message) to clipboard (requires `pyperclip` module)

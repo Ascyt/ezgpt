@@ -205,6 +205,53 @@ def _get_boolean_input(message:str, default_value:bool):
         if arg == 'y':
             return True
 
+def _get_multiline():
+    _print_info('Started multi-line. ^X to exit.')
+
+    prompt = ''
+    line_number = 1
+
+    try:
+        while True:
+            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
+            if new_line == '\x18':
+                break
+            if new_line == '\x15':
+                previous_line = prompt[:-1].rfind('\n')
+                if previous_line == -1:
+                    if prompt != '':
+                        previous_line = prompt[:-1].find('\n')
+                    else:
+                        _print_error('No previous line')
+                        continue
+
+                prompt = prompt[:(previous_line + 1)]
+                line_number -= 1
+
+                _print_info('Removed previous line')
+
+                continue
+            prompt += new_line + '\n'
+            line_number += 1
+    except KeyboardInterrupt:
+        print()
+        _print_info('Cancelled multi-line')
+        return None
+
+    prompt = prompt[:-1]
+
+    _print_info('Ended multi-line')
+
+    send_message = True
+    if prompt == '':
+        send_message = _get_boolean_input('Body is empty. Send anyways? (Y/n): ', True)
+
+    if not send_message:
+        return None
+
+    return prompt
+
+
 saved_conversations = {}
 PERSISTENT_CONVERSATION_PATH = os.path.join(os.path.expanduser('~'), '.ezgpt_conversations.json')
 persistant_saved_conversations = {}
@@ -371,10 +418,20 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt[0] == '+':
+                    if prompt == '+_':
+                        prompt = '+ _'
+                    if prompt == '++_':
+                        prompt = '++ _'
+
                     space = prompt.find(' ')
                     is_assistant = len(prompt) > 1 and prompt[1] == '+'
                     arg = prompt[space+1:]
                     valueString = prompt[(2 if is_assistant else 1):space]
+
+                    if arg == '_':
+                        arg = _get_multiline()
+                        if arg == None:
+                            continue
 
                     try:
                         value = int(valueString) if valueString != '' else len(conv.previous)
@@ -432,53 +489,18 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                     arg = prompt[space+1:]
 
+                    if arg == '_':
+                        arg = _get_multiline()
+                        if arg == None:
+                            continue
 
                     conv.previous[value] = { 'role': new_role, 'content': arg }
                     reprint_conversation()
                     continue
 
                 elif prompt == '_': 
-                    _print_info('Started multi-line. ^X to exit.')
-
-                    prompt = ''
-                    line_number = 1
-
-                    try:
-                        while True:
-                            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
-                            if new_line == '\x18':
-                                break
-                            if new_line == '\x15':
-                                previous_line = prompt[:-1].rfind('\n')
-                                if previous_line == -1:
-                                    if prompt != '':
-                                        previous_line = prompt[:-1].find('\n')
-                                    else:
-                                        _print_error('No previous line')
-                                        continue
-
-                                prompt = prompt[:(previous_line + 1)]
-                                line_number -= 1
-
-                                _print_info('Removed previous line')
-
-                                continue
-                            prompt += new_line + '\n'
-                            line_number += 1
-                    except KeyboardInterrupt:
-                        print()
-                        _print_info('Cancelled multi-line')
-                        continue
-
-                    prompt = prompt[:-1]
-
-                    _print_info('Ended multi-line')
-
-                    send_message = True
-                    if prompt == '':
-                        send_message = _get_boolean_input('Body is empty. Send anyways? (Y/n): ', True)
-
-                    if not send_message:
+                    prompt = _get_multiline()
+                    if prompt == None:
                         continue
                 
                 elif prompt == '&':
