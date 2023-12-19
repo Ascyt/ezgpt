@@ -377,7 +377,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     valueString = prompt[(2 if is_assistant else 1):space]
 
                     try:
-                        value = int(valueString)
+                        value = int(valueString) if valueString != '' else len(conv.previous)
                         conv.previous.insert(value, {'role': ('assistant' if is_assistant else 'user'), 'content': arg})
                         reprint_conversation()
                     except (IndexError, ValueError):
@@ -392,8 +392,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         reprint_conversation()
                         continue
 
+                    valueString = prompt[1:]
+
                     try:
-                        value = int(prompt[1:])
+                        value = int(valueString) if valueString != '' else len(conv.previous) - 1
 
                         conv.previous.pop(value)
                         reprint_conversation()
