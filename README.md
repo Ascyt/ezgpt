@@ -88,6 +88,7 @@ An even simpler way to use GPT is using the `conversation()` static function. He
 There are special commands you can use:
 
 - `?`: View the list of commands
+- `??`: Print some general useful information
 - `!`: Exit the conversation
 - `:[command]`: Run Python command: This will execute everything after the `:` as a line of Python. 
     -   *Example: `:print('hello')`* will print `hello`
@@ -115,6 +116,7 @@ There are special commands you can use:
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
     - *Example: `\- Hello` will add message `- Hello`*
 - `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+C` to cancel, `Ctrl+U` with `Enter` to remove previous line.
+- `??`: 
 
 A shorthand to start `conversation` is using the `ezgpt.c()` static function. While generating, you can use `Ctrl+C` to cancel or resend.
 

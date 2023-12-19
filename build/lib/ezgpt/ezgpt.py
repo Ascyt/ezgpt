@@ -9,6 +9,9 @@ import colorama
 import sys
 import re
 
+# Has to also be updated in ../setup.py because I'm too lazy to make that work
+VERSION = '1.13.1'
+
 try:
     import pyperclip
     has_imported_pyperclip = True
@@ -138,7 +141,7 @@ def _print_error(msg):
     print(colorama.Fore.RED + 'Error:\n\t' + msg + colorama.Style.RESET_ALL)
 
 def _print_info(msg):
-    print(colorama.Fore.GREEN + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.LIGHTGREEN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
 
 def _print_message(message, shorten_message, i):
     brackets = '[]' if message['role'] == 'user' else \
@@ -270,6 +273,8 @@ def update_persistant():
         json.dump(persistant_saved_conversations, file)
 
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
+    global has_imported_pyperclip
+
     conv = gpt(model=model, system=system, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
     conversation_name = None
 
@@ -285,7 +290,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
-        print(colorama.Fore.GREEN + 'Conversation started. Type ? for a list of commands.\n' + colorama.Style.RESET_ALL)
+        print(colorama.Fore.LIGHTGREEN_EX + f'ezgpt.conversation v{VERSION} | Type ? for a list of commands\n' + colorama.Style.RESET_ALL)
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
@@ -300,8 +305,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
             prompt = input(colorama.Fore.CYAN + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTCYAN_EX)
 
             if prompt == '?':
-                print(colorama.Fore.GREEN + 'Commands:')
+                print(colorama.Fore.LIGHTGREEN_EX + 'Commands:')
                 print('\t[?] View list of commands')
+                print('\t[??] Print general information')
+                print('\t')
                 print('\t[!] Exit conversation')
                 print('\t[:] Run Python command')
                 print('\t[#] Set GPT\'s property (no argument to list properties, [?#] for list of properties, [##] to reset)')
@@ -328,8 +335,32 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[\\] Override command')
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)' + colorama.Style.RESET_ALL)
                 continue
+
+            elif prompt == '??':
+                api_key_provided_by = "`api_key` variable" if (api_key != None) else \
+                    ("OPENAI_API_KEY environment variable" if ('OPENAI_API_KEY' in os.environ) else None)
+                
+                print(colorama.Fore.LIGHTGREEN_EX + 'ezgpt is a Python3 library designed to give the user easy and intuitive usage to OpenAI\'s API. It builds on top of OpenAI\'s official `openai` library.')
+                print()
+                print('Variable information:')
+                print(f'\tVersion: {VERSION}')
+                print("OpenAI key not provided" if api_key_provided_by == None else f'\tOpenAI key provided using: {api_key_provided_by}')
+                print(f'\tImported library `pyperclip`: {has_imported_pyperclip}')
+                print(f'\tPersistent conversations get saved in: {PERSISTENT_CONVERSATION_PATH}')
+                print(colorama.Fore.BLACK + '\tEaster Egg: Found' + colorama.Fore.LIGHTGREEN_EX)
+                print('Repository information:')
+                print('\tURL: https://github.com/Ascyt/ezgpt')
+                print('\tPyPI URL: https://pypi.org/project/ezgpt')
+                print('\tLicense: MIT License')
+                print()
+                print('About the owner:')
+                print('\tHey there! "Ascyt" is my go-to username everywhere. I\'m a 16 year old student and I\'ve been working on this project by myself since November 2023.')
+                print('\tMy website: https://ascyt.com/')
+                print('\t\u2665 Donate: https://ascyt.com/donate' + colorama.Style.RESET_ALL)
+                continue
+
             elif prompt == '?#':
-                print(colorama.Fore.GREEN + '(#) Command help:')
+                print(colorama.Fore.LIGHTGREEN_EX + '(#) Command help:')
                 print('\t[model] / [m] The model to generate the completion')
                 print('\t[temperature] / [temp] Controls randomness (0-2)')
                 print('\t[max_tokens] / [max] The maximum number of tokens to generate')
@@ -339,7 +370,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 continue
             elif prompt == '#':
                 values = (('model', conv.model), ('temperature', conv.temperature), ('max_tokens', conv.max_tokens), ('top_p', conv.top_p), ('frequency_penalty', conv.frequency_penalty), ('presence_penalty', conv.presence_penalty))
-                print(colorama.Fore.GREEN + '(#) Properties:')
+                print(colorama.Fore.LIGHTGREEN_EX + '(#) Properties:')
                 for element in values:
                     print(f'\t{element[0]}: {element[1]}')
                 print(colorama.Style.RESET_ALL, end='')
@@ -514,8 +545,6 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     reprint_conversation(additional_message={'role':'user','content':prompt})
 
                 elif prompt[0] == '@':
-                    global has_imported_pyperclip
-
                     if not has_imported_pyperclip:
                         _print_error('The pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
                         continue
@@ -578,10 +607,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
 
                     if arg == '':
                         if len(conversation) == 0:
-                            print(colorama.Fore.GREEN + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
+                            print(colorama.Fore.LIGHTGREEN_EX + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
                             continue
 
-                        print(colorama.Fore.GREEN + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
+                        print(colorama.Fore.LIGHTGREEN_EX + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
                         for key in list(conversation):
                             print('\t' + key)
                         print(colorama.Style.RESET_ALL, end='')
