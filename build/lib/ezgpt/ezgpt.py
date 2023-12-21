@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.13.1'
+VERSION = '1.13.2'
 
 try:
     import pyperclip
@@ -623,13 +623,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
 
                     conv.previous = value['messages']
-                    model = value['model']
-                    system = value['system']
-                    temperature = value['temperature']
-                    top_p = value['top_p']
-                    max_tokens = value['max_tokens']
-                    frequency_penalty = value['frequency_penalty']
-                    presence_penalty = value['presence_penalty']
+                    conv.model = value['model']
+                    conv.system = value['system']
+                    conv.temperature = value['temperature']
+                    conv.top_p = value['top_p']
+                    conv.max_tokens = value['max_tokens']
+                    conv.frequency_penalty = value['frequency_penalty']
+                    conv.presence_penalty = value['presence_penalty']
 
                     conversation_name = arg
 
@@ -680,7 +680,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         conversation_name = None
                         continue
                     
-                    save_conversation({'messages': conv.previous, 'model': model, 'system':system, 'temperature':temperature, 'top_p': top_p, 'max_tokens': max_tokens, 'frequency_penalty':frequency_penalty, 'presence_penalty':presence_penalty})
+                    save_conversation({'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
 
                     conversation_name = arg
 
