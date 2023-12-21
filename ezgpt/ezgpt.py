@@ -640,6 +640,19 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     save_persistant = len(prompt) > 1 and prompt[1] == '^' 
                     arg = prompt[(2 if save_persistant else 1):]
 
+                    if conversation_name == None:
+                        if arg == '':
+                            _print_error('Current conversation is not currently saved under a name')
+                            continue
+                    
+                    delete = False
+                    if arg[0] == '-':
+                        delete = True
+                        arg = arg[1:]
+
+                    if arg == '':
+                        arg = conversation_name
+
                     def save_conversation(conversation):
                         if save_persistant: 
                             save_conversation_persistant(arg, conversation)
@@ -652,21 +665,17 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             return
                         saved_conversations.pop(arg)
 
-                    if conversation_name == None:
-                        if arg == '':
-                            _print_error('Current conversation is not currently saved under a name')
+                    if delete:
+                        if arg == None:
+                            _print_error('Current conversation has not been saved')
                             continue
 
-                    if arg == '':
-                        arg = conversation_name
-                    
-                    delete = False
-                    if arg[0] == '-':
-                        delete = True
-                        arg = arg[1:]
-
-                    if delete:
-                        delete_conversation()
+                        try:
+                            delete_conversation()
+                        except KeyError:
+                            _print_error(f'Conversation "{arg}" does not exist')
+                            continue
+                            
                         _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
                         conversation_name = None
                         continue
