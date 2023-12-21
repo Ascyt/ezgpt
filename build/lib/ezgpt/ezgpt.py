@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.13.2'
+VERSION = '1.13.3'
 
 try:
     import pyperclip
@@ -184,7 +184,6 @@ async def _wait_for_response():
         _print_info(f"Generating... [{math.floor((time.time() - start_time) * 10) / 10}s]")
         await asyncio.sleep(0.1)
         sys.stdout.write("\033[F")  # Cursor up one line
-        sys.stdout.write("\033[K")  # Clear to the end of line
 
 
 async def _get_response(conv, prompt):
@@ -197,7 +196,7 @@ async def _get_response(conv, prompt):
 
 def _get_boolean_input(message:str, default_value:bool):
     while True:
-        arg = input(message)
+        arg = input(colorama.Fore.CYAN + message + colorama.Fore.LIGHTCYAN_EX)
         if len(arg) == 0:
             return default_value
 
@@ -585,7 +584,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                                 index = int(prompt[1:]) 
                             content = conv.previous[index]['content']
                         except (IndexError, ValueError):
-                            print(f'Error: `{prompt[1:]}` is not a valid index')
+                            _print_error(f'`{prompt[1:]}` is not a valid index')
                             continue
 
                         pyperclip.copy(content)
