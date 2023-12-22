@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.13.1'
+VERSION = '1.14.0'
 
 try:
     import pyperclip
@@ -144,22 +144,23 @@ def _print_info(msg):
     print(colorama.Fore.LIGHTGREEN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
 
 def _print_message(message, shorten_message, i):
-    brackets = '[]' if message['role'] == 'user' else \
-        ('<>' if message['role'] == 'assistant' else '{}')
-
     match (message['role']):
         case 'assistant': 
-            light = colorama.Fore.LIGHTWHITE_EX
-            dark = colorama.Fore.WHITE
+            light = colorama.Fore.WHITE
+            dark = colorama.Fore.LIGHTBLACK_EX
+            brackets = '<>'
         case 'user':
             light = colorama.Fore.LIGHTCYAN_EX 
             dark = colorama.Fore.CYAN
+            brackets = '[]'
         case 'system':
             light = colorama.Fore.LIGHTYELLOW_EX
             dark = colorama.Fore.YELLOW
+            brackets = '{}'
         case _:
             light = colorama.Fore.WHITE
             dark = colorama.Fore.LIGHTBLACK_EX
+            brackets = '()'
     
     value = 'S' if (i == -1 and message['role'] == 'system') else str(i)
     prefix = dark + brackets[0] + value + brackets[1] + light + ' '
@@ -169,7 +170,17 @@ def _print_message(message, shorten_message, i):
         print(prefix + content + colorama.Style.RESET_ALL)
         return
 
-    lines = message['content'].split('\n')
+    code_index_counter = 0
+    def get_code_index_counter():
+        nonlocal code_index_counter
+        code_index_counter += 1
+        return str(code_index_counter)
+
+    pattern = r"```.*?\n(.*?)```"
+    content = message['content']
+    content = re.sub(pattern, lambda match: colorama.Fore.MAGENTA + get_code_index_counter() + ':' + dark + match.group() + light, content, flags=re.DOTALL)
+
+    lines = content.split('\n')
 
     print(prefix + lines[0])
     for j in range(1, len(lines)):
@@ -209,14 +220,14 @@ def _get_boolean_input(message:str, default_value:bool):
             return True
 
 def _get_multiline():
-    _print_info('Started multi-line. ^X to exit.')
+    _print_info('Started multi-line. ^X to exit')
 
     prompt = ''
     line_number = 1
 
     try:
         while True:
-            new_line = input(colorama.Style.RESET_ALL + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
+            new_line = input(colorama.Fore.CYAN + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
             if new_line == '\x18':
                 break
             if new_line == '\x15':
@@ -290,7 +301,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
     def reprint_conversation(additional_message=None):
         os.system('cls' if (os.name == 'nt') else 'clear')
 
-        print(colorama.Fore.LIGHTGREEN_EX + f'ezgpt.conversation v{VERSION} | Type ? for a list of commands\n' + colorama.Style.RESET_ALL)
+        print(colorama.Fore.GREEN + f'ezgpt.conversation v{VERSION} | Type ? for a list of commands\n' + colorama.Style.RESET_ALL)
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
