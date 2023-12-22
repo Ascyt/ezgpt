@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.15.0'
+VERSION = '1.15.2'
 
 try:
     import pyperclip
@@ -218,15 +218,29 @@ def _get_boolean_input(message:str, default_value:bool):
         if arg == 'y':
             return True
 
-def _get_multiline():
+def _get_multiline(role):
     _print_info('Started multi-line. ^X to exit')
+
+    match (role):
+        case 'assistant': 
+            light = colorama.Fore.WHITE
+            dark = colorama.Fore.LIGHTBLACK_EX
+        case 'user':
+            light = colorama.Fore.LIGHTCYAN_EX 
+            dark = colorama.Fore.CYAN
+        case 'system':
+            light = colorama.Fore.LIGHTYELLOW_EX
+            dark = colorama.Fore.YELLOW
+        case _:
+            light = colorama.Fore.WHITE
+            dark = colorama.Fore.LIGHTBLACK_EX
 
     prompt = ''
     line_number = 1
 
     try:
         while True:
-            new_line = input(colorama.Fore.CYAN + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + colorama.Fore.LIGHTCYAN_EX)
+            new_line = input(dark + (8 - len(str(line_number))) * ' ' + str(line_number) + '> ' + light)
             if new_line == '\x18':
                 break
             if new_line == '\x15':
@@ -457,7 +471,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     message = prompt[1:] if len(prompt) > 1 else None
 
                     if prompt == '$_':
-                        message = _get_multiline()
+                        message = _get_multiline('system')
                         if message == None:
                             continue
 
@@ -478,7 +492,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     valueString = prompt[(2 if is_assistant else 1):space]
 
                     if arg == '_':
-                        arg = _get_multiline()
+                        arg = _get_multiline('assistant' if is_assistant else 'user')
                         if arg == None:
                             continue
 
@@ -539,7 +553,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     arg = prompt[space+1:]
 
                     if arg == '_':
-                        arg = _get_multiline()
+                        arg = _get_multiline(new_role)
                         if arg == None:
                             continue
 
@@ -548,7 +562,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt == '_': 
-                    prompt = _get_multiline()
+                    prompt = _get_multiline('user')
                     if prompt == None:
                         continue
                 
