@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.13.1'
+VERSION = '1.13.3'
 
 try:
     import pyperclip
@@ -184,7 +184,6 @@ async def _wait_for_response():
         _print_info(f"Generating... [{math.floor((time.time() - start_time) * 10) / 10}s]")
         await asyncio.sleep(0.1)
         sys.stdout.write("\033[F")  # Cursor up one line
-        sys.stdout.write("\033[K")  # Clear to the end of line
 
 
 async def _get_response(conv, prompt):
@@ -197,7 +196,7 @@ async def _get_response(conv, prompt):
 
 def _get_boolean_input(message:str, default_value:bool):
     while True:
-        arg = input(message)
+        arg = input(colorama.Fore.CYAN + message + colorama.Fore.LIGHTCYAN_EX)
         if len(arg) == 0:
             return default_value
 
@@ -585,7 +584,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                                 index = int(prompt[1:]) 
                             content = conv.previous[index]['content']
                         except (IndexError, ValueError):
-                            print(f'Error: `{prompt[1:]}` is not a valid index')
+                            _print_error(f'`{prompt[1:]}` is not a valid index')
                             continue
 
                         pyperclip.copy(content)
@@ -623,13 +622,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
 
                     conv.previous = value['messages']
-                    model = value['model']
-                    system = value['system']
-                    temperature = value['temperature']
-                    top_p = value['top_p']
-                    max_tokens = value['max_tokens']
-                    frequency_penalty = value['frequency_penalty']
-                    presence_penalty = value['presence_penalty']
+                    conv.model = value['model']
+                    conv.system = value['system']
+                    conv.temperature = value['temperature']
+                    conv.top_p = value['top_p']
+                    conv.max_tokens = value['max_tokens']
+                    conv.frequency_penalty = value['frequency_penalty']
+                    conv.presence_penalty = value['presence_penalty']
 
                     conversation_name = arg
 
@@ -639,6 +638,19 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 elif prompt[0] == '^':
                     save_persistant = len(prompt) > 1 and prompt[1] == '^' 
                     arg = prompt[(2 if save_persistant else 1):]
+
+                    if conversation_name == None:
+                        if arg == '':
+                            _print_error('Current conversation is not currently saved under a name')
+                            continue
+                    
+                    delete = False
+                    if arg[0] == '-':
+                        delete = True
+                        arg = arg[1:]
+
+                    if arg == '':
+                        arg = conversation_name
 
                     def save_conversation(conversation):
                         if save_persistant: 
@@ -652,26 +664,22 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                             return
                         saved_conversations.pop(arg)
 
-                    if conversation_name == None:
-                        if arg == '':
-                            _print_error('Current conversation is not currently saved under a name')
+                    if delete:
+                        if arg == None:
+                            _print_error('Current conversation has not been saved')
                             continue
 
-                    if arg == '':
-                        arg = conversation_name
-                    
-                    delete = False
-                    if arg[0] == '-':
-                        delete = True
-                        arg = arg[1:]
-
-                    if delete:
-                        delete_conversation()
+                        try:
+                            delete_conversation()
+                        except KeyError:
+                            _print_error(f'Conversation "{arg}" does not exist')
+                            continue
+                            
                         _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
                         conversation_name = None
                         continue
                     
-                    save_conversation({'messages': conv.previous, 'model': model, 'system':system, 'temperature':temperature, 'top_p': top_p, 'max_tokens': max_tokens, 'frequency_penalty':frequency_penalty, 'presence_penalty':presence_penalty})
+                    save_conversation({'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
 
                     conversation_name = arg
 
