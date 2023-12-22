@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.14.0'
+VERSION = '1.15.0'
 
 try:
     import pyperclip
@@ -184,7 +184,7 @@ def _print_message(message, shorten_message, i):
 
     print(prefix + lines[0])
     for j in range(1, len(lines)):
-        print((' ' * (len(str(i)) + 3)) + lines[j])
+        print((' ' * ((1 if i == -1 else len(str(i))) + 3)) + lines[j])
 
     print(colorama.Style.RESET_ALL, end='')
     
@@ -451,7 +451,15 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
 
                 elif prompt[0] == '$':
+                    if prompt == '$ _':
+                        prompt = '$_'
+
                     message = prompt[1:] if len(prompt) > 1 else None
+
+                    if prompt == '$_':
+                        message = _get_multiline()
+                        if message == None:
+                            continue
 
                     conv.system = message
 
