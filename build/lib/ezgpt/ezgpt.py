@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.15.2'
+VERSION = '1.15.3'
 
 try:
     import pyperclip
@@ -592,8 +592,12 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         try:
                             content = conv.previous[-1]['content']
 
-                            if len(prompt) > 2:
-                                index = int(prompt[2:]) - 1
+                            try:
+                                if len(prompt) > 2:
+                                    index = int(prompt[2:]) - 1
+                            except ValueError:
+                                _print_error(f'`{prompt[2:]}` is not a valid index')
+                                continue
                             
                             pattern = r"```.*?\n(.*?)```"
                             code_blocks = re.findall(pattern, content, re.DOTALL)
