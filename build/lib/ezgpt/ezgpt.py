@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '1.15.3'
+VERSION = '2.0.0'
 
 try:
     import pyperclip
@@ -143,27 +143,43 @@ def _print_error(msg):
 def _print_info(msg):
     print(colorama.Fore.LIGHTGREEN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
 
-def _print_message(message, shorten_message, i):
-    match (message['role']):
-        case 'assistant': 
-            light = colorama.Fore.WHITE
-            dark = colorama.Fore.LIGHTBLACK_EX
-            brackets = '<>'
-        case 'user':
-            light = colorama.Fore.LIGHTCYAN_EX 
-            dark = colorama.Fore.CYAN
-            brackets = '[]'
-        case 'system':
-            light = colorama.Fore.LIGHTYELLOW_EX
-            dark = colorama.Fore.YELLOW
-            brackets = '{}'
-        case _:
-            light = colorama.Fore.WHITE
-            dark = colorama.Fore.LIGHTBLACK_EX
-            brackets = '()'
-    
-    value = 'S' if (i == -1 and message['role'] == 'system') else str(i)
-    prefix = dark + brackets[0] + value + brackets[1] + light + ' '
+def _print_message(message, shorten_message, i, custom_prefix = None): 
+    if custom_prefix == None:
+        match (message['role']):
+            case 'assistant': 
+                light = colorama.Fore.WHITE
+                dark = colorama.Fore.LIGHTBLACK_EX
+                brackets = '<>'
+            case 'user':
+                light = colorama.Fore.LIGHTCYAN_EX 
+                dark = colorama.Fore.CYAN
+                brackets = '[]'
+            case 'system':
+                light = colorama.Fore.LIGHTYELLOW_EX
+                dark = colorama.Fore.YELLOW
+                brackets = '{}'
+            case _:
+                light = colorama.Fore.WHITE
+                dark = colorama.Fore.LIGHTBLACK_EX
+                brackets = '()'
+        
+        if i == -1:
+            match (message['role']):
+                case 'assistant':
+                    value = 'A'
+                case 'user':
+                    value = 'U'
+                case 'system':
+                    value = 'S'
+                case _:
+                    value = '/'
+        else:
+            value = str(i)
+        prefix = dark + brackets[0] + value + brackets[1] + light + ' '
+    else: 
+        light = custom_prefix['light']
+        dark = custom_prefix['dark']
+        prefix = dark + custom_prefix['prefix'] + light + ' '
 
     if shorten_message:
         content = _trim_at_higher_length(message['content'], 100, color=dark)
@@ -178,7 +194,7 @@ def _print_message(message, shorten_message, i):
 
     pattern = r"```.*?\n(.*?)```"
     content = message['content']
-    content = re.sub(pattern, lambda match: colorama.Fore.MAGENTA + get_code_index_counter() + ':' + dark + match.group() + light, content, flags=re.DOTALL)
+    content = re.sub(pattern, lambda match: colorama.Fore.BLUE + get_code_index_counter() + ':' + dark + match.group() + light, content, flags=re.DOTALL)
 
     lines = content.split('\n')
 
@@ -218,7 +234,7 @@ def _get_boolean_input(message:str, default_value:bool):
         if arg == 'y':
             return True
 
-def _get_multiline(role):
+def _get_multiline(role, color_light=None, color_dark=None):
     _print_info('Started multi-line. ^X to exit')
 
     match (role):
@@ -234,6 +250,8 @@ def _get_multiline(role):
         case _:
             light = colorama.Fore.WHITE
             dark = colorama.Fore.LIGHTBLACK_EX
+    dark = color_dark 
+    light = color_light
 
     prompt = ''
     line_number = 1
@@ -278,23 +296,87 @@ def _get_multiline(role):
 
     return prompt
 
+def _print_title():
+    os.system('cls' if (os.name == 'nt') else 'clear')
+    print(colorama.Fore.GREEN + f'ezgpt.conversation v{VERSION} | Type ? for a list of commands\n' + colorama.Style.RESET_ALL)
 
 saved_conversations = {}
+saved_flows = {}
+
 PERSISTENT_CONVERSATION_PATH = os.path.join(os.path.expanduser('~'), '.ezgpt_conversations.json')
-persistant_saved_conversations = {}
+persistent_saved_conversations = {}
+
+PERSISTENT_FLOW_PATH = os.path.join(os.path.expanduser('~'), '.ezgpt_flows.json')
+persistent_saved_flows = {}
 
 if os.path.exists(PERSISTENT_CONVERSATION_PATH):
     with open(PERSISTENT_CONVERSATION_PATH, 'r') as file:
-        persistant_saved_conversations = json.load(file)
+        persistent_saved_conversations = json.load(file)
+if os.path.exists(PERSISTENT_FLOW_PATH):
+    with open(PERSISTENT_FLOW_PATH, 'r') as file:
+        persistent_saved_flows = json.load(file)
 
-def save_conversation_persistant(name, conversation):
-    persistant_saved_conversations.setdefault(name, conversation)
-
-    update_persistant()
-
-def update_persistant():
+def _update_conversation_persistent():
     with open(PERSISTENT_CONVERSATION_PATH, 'w') as file:
-        json.dump(persistant_saved_conversations, file)
+        json.dump(persistent_saved_conversations, file)
+
+def _update_flow_persistent():
+    with open(PERSISTENT_FLOW_PATH, 'w') as file:
+        json.dump(persistent_saved_flows, file)
+
+def _get_flow(conversations, prompt, use_persistent, shorten_messages):
+    try:
+        global pyperclip
+        _print_title()
+
+        _print_info('Flow started')
+        print()
+
+        _print_message(message={'role':'user','content':prompt}, shorten_message=shorten_messages, i=-1)
+
+        dictionary = persistent_saved_conversations if use_persistent else saved_conversations
+        current_prompt = prompt
+
+        for conversation in conversations:
+            try:
+                data = dictionary[conversation]
+            except KeyError:
+                if use_persistent:
+                    _print_error(f'Conversation `{conversation}` does not exist in {PERSISTENT_CONVERSATION_PATH}')
+                    return 
+                _print_error(f'Conversation `{conversation}` does not exist in current session')
+                return 
+
+            conv = gpt()
+
+            conv.previous = data['messages']
+            conv.model = data['model']
+            conv.system = data['system']
+            conv.temperature = data['temperature']
+            conv.top_p = data['top_p']
+            conv.max_tokens = data['max_tokens']
+            conv.frequency_penalty = data['frequency_penalty']
+            conv.presence_penalty = data['presence_penalty']
+
+            current_prompt = asyncio.run(_get_response(conv, current_prompt))
+            _print_message(message={'role':'flow','content':current_prompt}, shorten_message=shorten_messages, i=-1, custom_prefix={'prefix':f'({conversation})', 'light':colorama.Fore.LIGHTMAGENTA_EX, 'dark': colorama.Fore.MAGENTA})
+
+        print()
+        _print_info('Flow finished')
+
+        if _get_boolean_input('Copy last message to clipboard? (y/N): ', False):
+            if not has_imported_pyperclip:
+                _print_error('The pyperclip module is required to use clipboard\n\tInstall it using `pip install pyperclip`')
+                input()
+                return
+
+            pyperclip.copy(current_prompt)
+    except KeyboardInterrupt:
+        print()
+        _print_info('Cancelled flow. Enter to return to conversation')
+        input()
+
+
 
 def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     global has_imported_pyperclip
@@ -310,11 +392,10 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
         conv.previous.pop(0)
 
     full_view = True
-    
-    def reprint_conversation(additional_message=None):
-        os.system('cls' if (os.name == 'nt') else 'clear')
 
-        print(colorama.Fore.GREEN + f'ezgpt.conversation v{VERSION} | Type ? for a list of commands\n' + colorama.Style.RESET_ALL)
+    def reprint_conversation(additional_message=None):
+        _print_title()
+
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
@@ -346,12 +427,13 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[@~] Copy code block to clipboard')
                 print('\t[@@] Copy conversation JSON to clipboard')
                 print('\t')
-                print('\t[^] Save conversation')
-                print('\t[%] Load conversation')
-                print('\t[^-] Remove conversation')
-                print('\t[^^] Save conversation to local filesystem')
-                print('\t[%%] Load conversation from local filesystem')
-                print('\t[^^-] Remove conversation from local filesystem')
+                print('\t[%] Load conversation (double % to use local filesystem)')
+                print('\t[%+] Save conversation (double % to use local filesystem)')
+                print('\t[%-] Remove conversation (double % to use local filesystem)')
+                print('\t')
+                print('\t[^] Run flow (double ^ to use local filesystem)')
+                print('\t[^+] Save flow (double ^ to use local filesystem)')
+                print('\t[^-] Remove flow (double ^ to use local filesystem)')
                 print('\t')
                 print('\t[=] Switch between full and shortened view')
                 print('\t[&] Re-generate last GPT message')
@@ -634,94 +716,238 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     _print_error('Invalid @ command')
                     continue
 
-                elif prompt[0] == '%':
-                    from_persistent = len(prompt) > 1 and prompt[1] == '%' 
+                elif prompt[0] == '%' or prompt[0] == '^':
+                    argument = prompt[0]
+                    is_flow = argument == '^'
 
-                    arg = prompt[(2 if from_persistent else 1):]
+                    use_persistent = len(prompt) > 1 and prompt[1] == argument
 
-                    conversation = persistant_saved_conversations if from_persistent else saved_conversations
+                    value = prompt[(2 if use_persistent else 1):]
 
-                    if arg == '':
-                        if len(conversation) == 0:
-                            print(colorama.Fore.LIGHTGREEN_EX + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
-                            continue
+                    add = len(value) > 0 and value[0] == '+'
+                    remove = len(value) > 0 and value[0] == '-'
+                    name = value[1 if (add or remove) else 0:]
 
-                        print(colorama.Fore.LIGHTGREEN_EX + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
-                        for key in list(conversation):
-                            print('\t' + key)
-                        print(colorama.Style.RESET_ALL, end='')
+                    if is_flow:
+                        first_space = name.find(' ')
+                        if first_space != -1:
+                            flow_argument = name[first_space + 1:]
+                            name = name[:first_space]
+
+                    if ' ' in name:
+                        _print_error('Name cannot contain spaces')
                         continue
+                    if name == '':
+                        if (add or remove):
+                            if is_flow:
+                                _print_error('No name')
+                                continue
+                            elif conversation_name == None:
+                                _print_error('Current conversation is not saved under a name')
+                                continue
 
-                    value = conversation.get(arg)
+                            name = conversation_name
+                        else:
+                            if is_flow:
+                                if use_persistent:
+                                    print(colorama.Fore.LIGHTGREEN_EX + f'Flows in {PERSISTENT_CONVERSATION_PATH}:')
+                                    dictionary = persistent_saved_flows
+                                else:
+                                    print(colorama.Fore.LIGHTGREEN_EX + f'Flows in current session:')
+                                    dictionary = saved_flows
+                            else: 
+                                if use_persistent:
+                                    print(colorama.Fore.LIGHTGREEN_EX + f'Conversations in {PERSISTENT_CONVERSATION_PATH}:')
+                                    dictionary = persistent_saved_conversations
+                                else:
+                                    print(colorama.Fore.LIGHTGREEN_EX + f'Conversations in current session:')
+                                    dictionary = saved_conversations
 
-                    if value == None:
-                        _print_error(f'Conversation "{arg}" not found{f" in `{PERSISTENT_CONVERSATION_PATH}`" if from_persistent else ""}. Type `%` for a list of saved conversations or `%%` for a list of persistently saved conversations')
-                        continue
-
-                    conv.previous = value['messages']
-                    conv.model = value['model']
-                    conv.system = value['system']
-                    conv.temperature = value['temperature']
-                    conv.top_p = value['top_p']
-                    conv.max_tokens = value['max_tokens']
-                    conv.frequency_penalty = value['frequency_penalty']
-                    conv.presence_penalty = value['presence_penalty']
-
-                    conversation_name = arg
-
-                    reprint_conversation()
-                    continue
-
-                elif prompt[0] == '^':
-                    save_persistant = len(prompt) > 1 and prompt[1] == '^' 
-                    arg = prompt[(2 if save_persistant else 1):]
-
-                    if conversation_name == None:
-                        if arg == '':
-                            _print_error('Current conversation is not currently saved under a name')
+                            for key in list(dictionary):
+                                print('\t' + key)
+                            
+                            print(colorama.Style.RESET_ALL, end='')
                             continue
-                    
-                    delete = False
-                    if arg[0] == '-':
-                        delete = True
-                        arg = arg[1:]
+                        
+                    if is_flow:
+                        if add:
+                            dictionary = persistent_saved_flows if use_persistent else saved_flows
+                            
+                            dictionary.setdefault(name, flow_argument.split(' '))
 
-                    if arg == '':
-                        arg = conversation_name
-
-                    def save_conversation(conversation):
-                        if save_persistant: 
-                            save_conversation_persistant(arg, conversation)
-                            return
-                        saved_conversations.setdefault(arg, conversation)
-                    def delete_conversation():
-                        if save_persistant:
-                            persistant_saved_conversations.pop(arg)
-                            update_persistant()
-                            return
-                        saved_conversations.pop(arg)
-
-                    if delete:
-                        if arg == None:
-                            _print_error('Current conversation has not been saved')
+                            if use_persistent:
+                                _update_flow_persistent()
+                                _print_info(f'Saved flow `{name}` in {PERSISTENT_FLOW_PATH}')
+                                continue
+                            _print_info(f'Saved flow `{name}` for current session')
                             continue
 
                         try:
-                            delete_conversation()
-                        except KeyError:
-                            _print_error(f'Conversation "{arg}" does not exist')
-                            continue
+                            if remove:
+                                if use_persistent:
+                                    persistent_saved_flows.pop(name)
+                                    _print_info(f'Removed flow `{name}` from local file system')
+                                    continue
+                                saved_flows.pop(name)
+                                _update_flow_persistent()
+                                _print_info(f'Removed flow `{name}` from current session')
+                                continue
+
+                            dictionary = persistent_saved_flows if use_persistent else saved_flows
+                            flow_conversations = dictionary[name]
+
+                            if flow_argument == '_': 
+                                flow_argument = _get_multiline('flow', color_light=colorama.Fore.LIGHTMAGENTA_EX, color_dark=colorama.Fore.MAGENTA)
                             
-                        _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
-                        conversation_name = None
+                            _get_flow(flow_conversations, flow_argument, use_persistent, not full_view)
+                            reprint_conversation()
+                            continue
+
+                        except KeyError:
+                            if use_persistent:
+                                _print_error(f'Flow `{name}` does not exist in {PERSISTENT_FLOW_PATH}')
+                                continue
+                            _print_error(f'Flow `{name}` does not exist in current session')
+                            continue
                         continue
-                    
-                    save_conversation({'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
+                
+                    if add:
+                        dictionary = persistent_saved_conversations if use_persistent else saved_conversations
+                        
+                        dictionary.setdefault(name, {'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
 
-                    conversation_name = arg
+                        if use_persistent:
+                            _update_conversation_persistent()
+                            _print_info(f'Saved conversation `{name}` in {PERSISTENT_CONVERSATION_PATH}')
+                            continue
+                        _print_info(f'Saved conversation `{name}` for current session')
+                        continue
 
-                    _print_info(f'Saved conversation{" in local filesystem" if save_persistant else ""} as "{arg}"')
+                    try:
+                        if remove:
+                            if use_persistent:
+                                persistent_saved_conversations.pop(name)
+                                _update_conversation_persistent()
+                                _print_info(f'Removed conversation `{name}` from local file system')
+                                continue
+                            saved_conversations.pop(name)
+                            _print_info(f'Removed conversation `{name}` from current session')
+                            continue
+
+                        dictionary = persistent_saved_conversations if use_persistent else saved_conversations
+                        new_conv = dictionary[name]
+
+                        conv.previous = new_conv['messages']
+                        conv.model = new_conv['model']
+                        conv.system = new_conv['system']
+                        conv.temperature = new_conv['temperature']
+                        conv.top_p = new_conv['top_p']
+                        conv.max_tokens = new_conv['max_tokens']
+                        conv.frequency_penalty = new_conv['frequency_penalty']
+                        conv.presence_penalty = new_conv['presence_penalty']
+
+                        conversation_name = name
+
+                        reprint_conversation()
+                        continue
+
+                    except KeyError:
+                        if use_persistent:
+                            _print_error(f'Conversation `{name}` does not exist in {PERSISTENT_CONVERSATION_PATH}')
+                            continue
+                        _print_error(f'Conversation `{name}` does not exist in current session')
+                        continue
                     continue
+                                
+                if False:        
+                    if prompt[0] == '%':
+                        from_persistent = len(prompt) > 1 and prompt[1] == '%' 
+
+                        arg = prompt[(2 if from_persistent else 1):]
+
+                        conversation = persistent_saved_conversations if from_persistent else saved_conversations
+
+                        if arg == '':
+                            if len(conversation) == 0:
+                                print(colorama.Fore.LIGHTGREEN_EX + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
+                                continue
+
+                            print(colorama.Fore.LIGHTGREEN_EX + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
+                            for key in list(conversation):
+                                print('\t' + key)
+                            print(colorama.Style.RESET_ALL, end='')
+                            continue
+
+                        value = conversation.get(arg)
+
+                        if value == None:
+                            _print_error(f'Conversation "{arg}" not found{f" in `{PERSISTENT_CONVERSATION_PATH}`" if from_persistent else ""}. Type `%` for a list of saved conversations or `%%` for a list of persistently saved conversations')
+                            continue
+
+                        conv.previous = value['messages']
+                        conv.model = value['model']
+                        conv.system = value['system']
+                        conv.temperature = value['temperature']
+                        conv.top_p = value['top_p']
+                        conv.max_tokens = value['max_tokens']
+                        conv.frequency_penalty = value['frequency_penalty']
+                        conv.presence_penalty = value['presence_penalty']
+
+                        conversation_name = arg
+
+                        reprint_conversation()
+                        continue
+
+                    elif prompt[0] == '^':
+                        save_persistant = len(prompt) > 1 and prompt[1] == '^' 
+                        arg = prompt[(2 if save_persistant else 1):]
+
+                        if conversation_name == None:
+                            if arg == '':
+                                _print_error('Current conversation is not currently saved under a name')
+                                continue
+                        
+                        remove = False
+                        if arg[0] == '-':
+                            remove = True
+                            arg = arg[1:]
+
+                        if arg == '':
+                            arg = conversation_name
+
+                        def save_conversation(conversation):
+                            if save_persistant: 
+                                save_conversation_persistant(arg, conversation)
+                                return
+                            saved_conversations.setdefault(arg, conversation)
+                        def delete_conversation():
+                            if save_persistant:
+                                persistent_saved_conversations.pop(arg)
+                                update_persistant()
+                                return
+                            saved_conversations.pop(arg)
+
+                        if remove:
+                            if arg == None:
+                                _print_error('Current conversation has not been saved')
+                                continue
+
+                            try:
+                                delete_conversation()
+                            except KeyError:
+                                _print_error(f'Conversation "{arg}" does not exist')
+                                continue
+                                
+                            _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
+                            conversation_name = None
+                            continue
+                        
+                        save_conversation({'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
+
+                        conversation_name = arg
+
+                        _print_info(f'Saved conversation{" in local filesystem" if save_persistant else ""} as "{arg}"')
+                        continue
 
             else:
                 prompt = prompt[1:]

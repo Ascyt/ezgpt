@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 1.15.3
+Version: 2.0.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -120,17 +120,16 @@ There are special commands you can use:
 - `@~<index>`: Copy codeblock. Index starts and defaults to `1` (first codeblock).
 - `@@`: Copy conversation JSON to clipboard (requires `pyperclip` module)
 - `^<name>`: Save the conversation. Gets cleared after restart and is only valid for the current session. `arg` defaults to the current conversation
-- `%<name>`: Load the conversation `name`. Use just `%` without arguments to list all saved conversations
-- `^-<name>`: Same as `^<name>` but will remove the conversation instead of saving it
-- `^^<name>`: Same as `^<name>` but will store your conversation on your local filesystem so you can use it between sessions. Saves to `~/.ezgpt_conversations.json`
+- `%<name>`: Load the conversation `name`. Use just `%` without arguments to list all saved conversations. Use `%%<name>` to use from local filesystem (`~/.ezgpt_conversations.json`)
+- `%+<name>`: Save the conversation as `name`. Use `%%+<name>` to save to local filesystem.
+- `%-<name>`: Remove the conversation `name`. Use `%%`
 - `%%<name>` Same as `%<name>` but will get the conversation from `~/.ezgpt_conversations.json`
-- `^^-<name>` Same as `^-<name>` but for local file system
+- Flows: Similar syntax to conversation saving/loading, but using `^` instead of `%`. To run a flow, use `^[name] [message]`. Use `_` as `[message]` for multi-line. To save, use `^+[name] [conversations]`, where `conversations` is a list of saved conversations to step through, seperated by spaces. Also allows for local filesystem (`~/.ezgpt_flows.json`)
 - `=`: Switch between full view and shortened view. Shortened view will only contain the first line up to 100 characters for easy readability. 
 - *empty*: Sending an empty message will reload the conversation to only include the actual messages. 
 - `\[message]`: This will let you type messages with special characters at the beginning without having them act as commands.
     - *Example: `\- Hello` will add message `- Hello`*
 - `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+C` to cancel, `Ctrl+U` with `Enter` to remove previous line.
-- `??`: 
 
 A shorthand to start `conversation` is using the `ezgpt.c()` static function. While generating, you can use `Ctrl+C` to cancel or resend.
 
