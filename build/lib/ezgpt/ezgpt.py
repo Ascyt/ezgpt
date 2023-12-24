@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 try:
     import pyperclip
@@ -250,8 +250,10 @@ def _get_multiline(role, color_light=None, color_dark=None):
         case _:
             light = colorama.Fore.WHITE
             dark = colorama.Fore.LIGHTBLACK_EX
-    dark = color_dark 
-    light = color_light
+    if color_dark != None:
+        dark = color_dark 
+    if color_light != None:
+        light = color_light
 
     prompt = ''
     line_number = 1
