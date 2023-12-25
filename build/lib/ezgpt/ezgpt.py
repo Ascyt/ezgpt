@@ -76,12 +76,13 @@ class gpt:
             system = self.system
 
         use_system_property = False
+        formatted_messages = messages.copy()
 
         if system is not None:
-            messages.insert(0, {'role': 'system', 'content': system})
+            formatted_messages.insert(0, {'role': 'system', 'content': system})
             use_system_property = True
         if user is not None:
-            messages.append({'role': 'user', 'content': user})
+            formatted_messages.append({'role': 'user', 'content': user})
 
         # Use instance defaults if not overridden
         temperature = temperature if temperature is not None else self.temperature
@@ -91,13 +92,13 @@ class gpt:
         presence_penalty = presence_penalty if presence_penalty is not None else self.presence_penalty
 
         if self.logs:
-          for message in messages:
+          for message in formatted_messages:
               self._print_log(message['role'], message['content'], '[]')
 
         
         response = await client.chat.completions.create(
             model=self.model,
-            messages=messages,
+            messages=formatted_messages,
             temperature=temperature,
             max_tokens=max_tokens,
             top_p=top_p,
@@ -108,7 +109,7 @@ class gpt:
         if self.logs:
             self._print_log('assistant', response.choices[0].message.content, '<>')
 
-        self.previous = messages
+        self.previous = formatted_messages
         if use_system_property:
             self.previous = self.previous[1:]
 
@@ -341,7 +342,7 @@ def _get_flow(conversations, prompt, use_persistent, shorten_messages):
 
         for conversation in conversations:
             try:
-                data = dictionary[conversation]
+                data = dictionary[conversation].copy()
             except KeyError:
                 if use_persistent:
                     _print_error(f'Conversation `{conversation}` does not exist in {PERSISTENT_CONVERSATION_PATH}')
