@@ -10,7 +10,7 @@ import sys
 import re
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.0.1'
+VERSION = '2.0.4'
 
 try:
     import pyperclip
@@ -776,6 +776,9 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         if add:
                             dictionary = persistent_saved_flows if use_persistent else saved_flows
                             
+                            if name in dictionary:
+                                dictionary.pop(name)
+
                             dictionary.setdefault(name, flow_argument.split(' '))
 
                             if use_persistent:
@@ -816,6 +819,9 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 
                     if add:
                         dictionary = persistent_saved_conversations if use_persistent else saved_conversations
+                        
+                        if name in dictionary:
+                            dictionary.pop(name)
                         
                         dictionary.setdefault(name, {'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
 
