@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.1.0'
+VERSION = '2.1.1'
 
 try:
     import pyperclip
@@ -152,7 +152,7 @@ def _print_error(msg):
     print(colorama.Fore.RED + 'Error:\n\t' + msg + colorama.Style.RESET_ALL)
 
 def _print_info(msg):
-    print(colorama.Fore.LIGHTGREEN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
+    print(colorama.Fore.GREEN + '( ' + colorama.Fore.LIGHTGREEN_EX + msg + colorama.Fore.GREEN + ' )' + colorama.Style.RESET_ALL)
 
 # Returns count of lines printed
 def _print_message(message, shorten_message, i, custom_prefix = None): 
@@ -929,6 +929,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
         printed_lines = [0]
         while True:
             try:
+                start_time = time.time()
                 response = asyncio.run(_get_response(conv=conv, prompt=prompt, i=(len(conv.previous) + 1), shorten_message=not full_view, printed_lines=printed_lines))
                 break
             except KeyboardInterrupt:
@@ -945,7 +946,9 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 break
 
         if not cancel_sending:
-            _move_cur_up(printed_lines[0])
+            _move_cur_up(printed_lines[0] + 1)
+            elapsed_time = math.floor((time.time() - start_time) * 10) / 10
+            _print_info(f'Finished generating [{elapsed_time}s]')
 
             _print_message(message=({'role':'assistant', 'content':response}), shorten_message=(not full_view), i=(len(conv.previous) - 1))
     
