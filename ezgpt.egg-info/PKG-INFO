@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: ezgpt
-Version: 2.0.4
+Version: 2.1.0
 Summary: A simple GPT interface
 Home-page: https://github.com/Ascyt/ezgpt
 Author: Filip Schauer
@@ -11,6 +11,8 @@ Classifier: License :: OSI Approved :: MIT License
 Requires-Python: >=3.11.2
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: openai>=1.0.0
+Requires-Dist: colorama
 
 # ezgpt
 

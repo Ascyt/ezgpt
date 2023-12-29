@@ -8,9 +8,10 @@ import time
 import colorama
 import sys
 import re
+import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.0.4'
+VERSION = '2.1.0'
 
 try:
     import pyperclip
@@ -56,7 +57,7 @@ class gpt:
         spaces = (12 - len(role)) / 2
         print('\t' + brackets[0] + (math.ceil(spaces) * " ") + role + (math.floor(spaces) * " ") + brackets[1] + " " + content)
 
-    async def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None):
+    async def get(self, user=None, system=None, messages=None, temperature=None, top_p=None, max_tokens=None, frequency_penalty=None, presence_penalty=None, stream=False, stream_messages=[]):
         global client
         global api_key
         try:
@@ -103,20 +104,29 @@ class gpt:
             max_tokens=max_tokens,
             top_p=top_p,
             frequency_penalty=frequency_penalty,
-            presence_penalty=presence_penalty
+            presence_penalty=presence_penalty,
+            stream=stream
         )
+        content = ''
+        if stream:
+            async for chunk in response:
+                delta = chunk.choices[0].delta.content or ""
+                content += delta
+                stream_messages += [delta]
+        else:
+            content = response.choices[0].message.content
 
         if self.logs:
-            self._print_log('assistant', response.choices[0].message.content, '<>')
+            self._print_log('assistant', content, '<>')
 
         self.previous = formatted_messages
         if use_system_property:
             self.previous = self.previous[1:]
 
-        message = response.choices[0].message
-        self.previous.append({'role':message.role,'content':message.content})
+        message = content
+        self.previous.append({'role':'assistant','content':content})
 
-        return response.choices[0].message.content
+        return content
 
 staticGpt = gpt()
 
@@ -144,6 +154,7 @@ def _print_error(msg):
 def _print_info(msg):
     print(colorama.Fore.LIGHTGREEN_EX + '( ' + msg + ' )' + colorama.Style.RESET_ALL)
 
+# Returns count of lines printed
 def _print_message(message, shorten_message, i, custom_prefix = None): 
     if custom_prefix == None:
         match (message['role']):
@@ -176,16 +187,16 @@ def _print_message(message, shorten_message, i, custom_prefix = None):
                     value = '/'
         else:
             value = str(i)
-        prefix = dark + brackets[0] + value + brackets[1] + light + ' '
+        prefix = brackets[0] + value + brackets[1] + ' '
     else: 
         light = custom_prefix['light']
         dark = custom_prefix['dark']
-        prefix = dark + custom_prefix['prefix'] + light + ' '
+        prefix = custom_prefix['prefix'] + ' '
 
     if shorten_message:
         content = _trim_at_higher_length(message['content'], 100, color=dark)
-        print(prefix + content + colorama.Style.RESET_ALL)
-        return
+        print(dark + prefix + light + content + colorama.Style.RESET_ALL)
+        return 1
 
     code_index_counter = 0
     def get_code_index_counter():
@@ -193,34 +204,73 @@ def _print_message(message, shorten_message, i, custom_prefix = None):
         code_index_counter += 1
         return str(code_index_counter)
 
-    pattern = r"```.*?\n(.*?)```"
-    content = message['content']
-    content = re.sub(pattern, lambda match: colorama.Fore.BLUE + get_code_index_counter() + ':' + dark + match.group() + light, content, flags=re.DOTALL)
+    lines = message['content'].split('\n')
 
-    lines = content.split('\n')
+    max_width = shutil.get_terminal_size().columns - len(prefix) - 1
+    
+    in_code = False
+    code_counter = 0
 
-    print(prefix + lines[0])
-    for j in range(1, len(lines)):
-        print((' ' * ((1 if i == -1 else len(str(i))) + 3)) + lines[j])
+    lines_printed = 0
+    for ii in range(0, len(lines)):
+        line = lines[ii]
+
+        additional_prefix = prefix if ii == 0 else ''
+        additional_prefix_length = len(additional_prefix)
+
+        is_code_change = '```' in line
+
+        if is_code_change:
+            if not in_code:
+                code_counter += 1
+                additional_prefix += colorama.Fore.BLUE + str(code_counter) + ':'
+                additional_prefix_length += len(str(code_counter)) + 1
+
+        for iii in range(0, len(line), max_width):
+            print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + line[iii:(iii + max_width)])
+
+            additional_prefix = '...'
+            additional_prefix_length = 3
+
+            lines_printed += 1
+
+        if is_code_change:
+            in_code = not in_code
 
     print(colorama.Style.RESET_ALL, end='')
+    return lines_printed
     
 
-async def _wait_for_response():
+async def _wait_for_response(stream_messages, i, shorten_message, printed_lines):
     start_time = time.time()
     while True:
         _print_info(f"Generating... [{math.floor((time.time() - start_time) * 10) / 10}s]")
+
+        message = "".join(stream_messages)
+
+        lines_printed = _print_message({'role':'assistant','content':message}, shorten_message=shorten_message, i=i)
+        
+        printed_lines[0] = lines_printed
+
         await asyncio.sleep(0.1)
-        sys.stdout.write("\033[F")  # Cursor up one line
+        
+        _move_cur_up(lines_printed + 1)
 
+def _move_cur_up(amount):
+    sys.stdout.write('\033[{}A'.format(amount))  
+    sys.stdout.flush()
 
-async def _get_response(conv, prompt):
+async def _get_response(conv, prompt, i, shorten_message, printed_lines):
     loop = asyncio.get_event_loop()
-    tasks = [loop.create_task(conv.get(user=prompt, messages=conv.previous)), loop.create_task(_wait_for_response())]
+    stream_messages = []
 
-    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+    tasks = [loop.create_task(conv.get(user=prompt, messages=conv.previous, stream=True, stream_messages=stream_messages)), loop.create_task(_wait_for_response(stream_messages=stream_messages, i=i, shorten_message=shorten_message, printed_lines=printed_lines))]
+
+    done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)        
+    
     for task in done:
         return task.result()
+
 
 def _get_boolean_input(message:str, default_value:bool):
     while True:
@@ -361,7 +411,11 @@ def _get_flow(conversations, prompt, use_persistent, shorten_messages):
             conv.frequency_penalty = data['frequency_penalty']
             conv.presence_penalty = data['presence_penalty']
 
-            current_prompt = asyncio.run(_get_response(conv, current_prompt))
+            printed_lines = [0]
+            current_prompt = asyncio.run(_get_response(conv, current_prompt, i=-1, shorten_message=shorten_messages, printed_lines=printed_lines))
+
+            _move_cur_up(printed_lines[0])
+
             _print_message(message={'role':'flow','content':current_prompt}, shorten_message=shorten_messages, i=-1, custom_prefix={'prefix':f'({conversation})', 'light':colorama.Fore.LIGHTMAGENTA_EX, 'dark': colorama.Fore.MAGENTA})
 
         print()
@@ -868,106 +922,16 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                         continue
                     continue
                                 
-                if False:        
-                    if prompt[0] == '%':
-                        from_persistent = len(prompt) > 1 and prompt[1] == '%' 
-
-                        arg = prompt[(2 if from_persistent else 1):]
-
-                        conversation = persistent_saved_conversations if from_persistent else saved_conversations
-
-                        if arg == '':
-                            if len(conversation) == 0:
-                                print(colorama.Fore.LIGHTGREEN_EX + f'No saved conversations{" in local file system" if from_persistent else ""}' + colorama.Style.RESET_ALL)
-                                continue
-
-                            print(colorama.Fore.LIGHTGREEN_EX + f'Saved conversations{" in filesystem" if from_persistent else ""}:')
-                            for key in list(conversation):
-                                print('\t' + key)
-                            print(colorama.Style.RESET_ALL, end='')
-                            continue
-
-                        value = conversation.get(arg)
-
-                        if value == None:
-                            _print_error(f'Conversation "{arg}" not found{f" in `{PERSISTENT_CONVERSATION_PATH}`" if from_persistent else ""}. Type `%` for a list of saved conversations or `%%` for a list of persistently saved conversations')
-                            continue
-
-                        conv.previous = value['messages']
-                        conv.model = value['model']
-                        conv.system = value['system']
-                        conv.temperature = value['temperature']
-                        conv.top_p = value['top_p']
-                        conv.max_tokens = value['max_tokens']
-                        conv.frequency_penalty = value['frequency_penalty']
-                        conv.presence_penalty = value['presence_penalty']
-
-                        conversation_name = arg
-
-                        reprint_conversation()
-                        continue
-
-                    elif prompt[0] == '^':
-                        save_persistant = len(prompt) > 1 and prompt[1] == '^' 
-                        arg = prompt[(2 if save_persistant else 1):]
-
-                        if conversation_name == None:
-                            if arg == '':
-                                _print_error('Current conversation is not currently saved under a name')
-                                continue
-                        
-                        remove = False
-                        if arg[0] == '-':
-                            remove = True
-                            arg = arg[1:]
-
-                        if arg == '':
-                            arg = conversation_name
-
-                        def save_conversation(conversation):
-                            if save_persistant: 
-                                save_conversation_persistant(arg, conversation)
-                                return
-                            saved_conversations.setdefault(arg, conversation)
-                        def delete_conversation():
-                            if save_persistant:
-                                persistent_saved_conversations.pop(arg)
-                                update_persistant()
-                                return
-                            saved_conversations.pop(arg)
-
-                        if remove:
-                            if arg == None:
-                                _print_error('Current conversation has not been saved')
-                                continue
-
-                            try:
-                                delete_conversation()
-                            except KeyError:
-                                _print_error(f'Conversation "{arg}" does not exist')
-                                continue
-                                
-                            _print_info(f'Removed conversation "{arg}"{" from local filesystem" if save_persistant else ""}')
-                            conversation_name = None
-                            continue
-                        
-                        save_conversation({'messages': conv.previous.copy(), 'model': conv.model, 'system':conv.system, 'temperature':conv.temperature, 'top_p': conv.top_p, 'max_tokens': conv.max_tokens, 'frequency_penalty':conv.frequency_penalty, 'presence_penalty':conv.presence_penalty})
-
-                        conversation_name = arg
-
-                        _print_info(f'Saved conversation{" in local filesystem" if save_persistant else ""} as "{arg}"')
-                        continue
-
             else:
                 prompt = prompt[1:]
 
         cancel_sending = False
+        printed_lines = [0]
         while True:
             try:
-                response = asyncio.run(_get_response(conv, prompt))
+                response = asyncio.run(_get_response(conv=conv, prompt=prompt, i=(len(conv.previous) + 1), shorten_message=not full_view, printed_lines=printed_lines))
                 break
             except KeyboardInterrupt:
-                conv.previous = conv.previous[:-1]
                 arg = ''
 
                 if _get_boolean_input('Resend message? (Y/n): ', True):
@@ -977,15 +941,16 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 break
             except openai.OpenAIError as e:
                 print(colorama.Fore.RED + 'OpenAI Error:\n\t' + e.message + colorama.Style.RESET_ALL)
-                conv.previous = conv.previous[:-1]
                 cancel_sending = True
                 break
-    
-        if not cancel_sending:
-            _print_message({'role':'assistant','content':response}, (not full_view), len(conv.previous) - 1)
 
+        if not cancel_sending:
+            _move_cur_up(printed_lines[0])
+
+            _print_message(message=({'role':'assistant', 'content':response}), shorten_message=(not full_view), i=(len(conv.previous) - 1))
+    
 def c(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
 
-if __name__ == '__main__':  
+if __name__ == '__main__':
     c()
