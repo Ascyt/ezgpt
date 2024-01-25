@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.1.1'
+VERSION = '2.1.2'
 
 try:
     import pyperclip
@@ -151,11 +151,11 @@ def print_messages(conv, shorten_messages, additional_messages=None):
 def _print_error(msg):
     print(colorama.Fore.RED + 'Error:\n\t' + msg + colorama.Style.RESET_ALL)
 
-def _print_info(msg):
-    print(colorama.Fore.GREEN + '( ' + colorama.Fore.LIGHTGREEN_EX + msg + colorama.Fore.GREEN + ' )' + colorama.Style.RESET_ALL)
+def _print_info(msg, end='\n'):
+    print(colorama.Fore.GREEN + '( ' + colorama.Fore.LIGHTGREEN_EX + msg + colorama.Fore.GREEN + ' )' + colorama.Style.RESET_ALL, end=end)
 
 # Returns count of lines printed
-def _print_message(message, shorten_message, i, custom_prefix = None): 
+def _print_message(message, shorten_message, i, custom_prefix = None, trim_vertical = False): 
     if custom_prefix == None:
         match (message['role']):
             case 'assistant': 
@@ -212,7 +212,21 @@ def _print_message(message, shorten_message, i, custom_prefix = None):
     code_counter = 0
 
     lines_printed = 0
+    def check_if_above_vertical_limit():
+        nonlocal trim_vertical
+        if not trim_vertical:
+            return False
+
+        nonlocal lines_printed
+        nonlocal lines
+        if lines_printed >= shutil.get_terminal_size().lines - 2:
+            _print_info(f'+ {len(lines) - lines_printed}', end='')
+            return True
+        return False
     for ii in range(0, len(lines)):
+        if check_if_above_vertical_limit():
+            return lines_printed + 1
+
         line = lines[ii]
 
         additional_prefix = prefix if ii == 0 else ''
@@ -227,6 +241,9 @@ def _print_message(message, shorten_message, i, custom_prefix = None):
                 additional_prefix_length += len(str(code_counter)) + 1
 
         for iii in range(0, len(line), max_width):
+            if check_if_above_vertical_limit():
+                return lines_printed + 1
+
             print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + line[iii:(iii + max_width)])
 
             additional_prefix = '...'
@@ -239,6 +256,7 @@ def _print_message(message, shorten_message, i, custom_prefix = None):
 
     print(colorama.Style.RESET_ALL, end='')
     return lines_printed
+
     
 
 async def _wait_for_response(stream_messages, i, shorten_message, printed_lines):
@@ -248,7 +266,7 @@ async def _wait_for_response(stream_messages, i, shorten_message, printed_lines)
 
         message = "".join(stream_messages)
 
-        lines_printed = _print_message({'role':'assistant','content':message}, shorten_message=shorten_message, i=i)
+        lines_printed = _print_message({'role':'assistant','content':message}, shorten_message=shorten_message, i=i, trim_vertical=True)
         
         printed_lines[0] = lines_printed
 
@@ -257,7 +275,7 @@ async def _wait_for_response(stream_messages, i, shorten_message, printed_lines)
         _move_cur_up(lines_printed + 1)
 
 def _move_cur_up(amount):
-    sys.stdout.write('\033[{}A'.format(amount))  
+    sys.stdout.write('\033[{}A\r'.format(amount))  
     sys.stdout.flush()
 
 async def _get_response(conv, prompt, i, shorten_message, printed_lines):
