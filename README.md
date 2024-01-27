@@ -117,6 +117,9 @@ There are special commands you can use:
     - *Example: `\- Hello` will add message `- Hello`*
 - `_`: Start multiline. This lets you write and paste in multi-line text. `Ctrl+X` with `Enter` to stop multiline, `Ctrl+C` to cancel, `Ctrl+U` with `Enter` to remove previous line.
 
+If you put a number before your prompt, it will execute the prompt n times.
+- *Example: `10-0` will remove the first 10 messages*
+
 A shorthand to start `conversation` is using the `ezgpt.c()` static function. While generating, you can use `Ctrl+C` to cancel or resend.
 
 ## Notes

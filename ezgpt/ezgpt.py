@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.2.0'
+VERSION = '2.3.0'
 
 try:
     import pyperclip
@@ -475,18 +475,23 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
         print_messages(conv=conv, shorten_messages=(not full_view), additional_messages=None if additional_message == None else [additional_message])
 
     reprint_conversation()
-        
+
+    prompt_queue = []
     
     while True:
         if user != None:
             prompt = user
             user = None
-            _print_message({'role':'user','content':prompt}, len(conv.previous))
+            _print_message(message={'role':'user','content':prompt}, shorten_message=not full_view, i=len(conv.previous))
         else:
             amount_interrupt = 0
             while True:
                 try:
-                    prompt = input(colorama.Fore.CYAN + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTCYAN_EX)
+                    if len(prompt_queue) > 0:
+                        prompt = prompt_queue.pop(0)
+                        _print_message(message={'role':'user','content':prompt}, shorten_message=not full_view, i=len(conv.previous))
+                    else:
+                        prompt = input(colorama.Fore.CYAN + f'[{len(conv.previous)}] ' + colorama.Fore.LIGHTCYAN_EX)
                     break
                 except KeyboardInterrupt:
                     print()
@@ -496,6 +501,25 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     else:
                         _print_info('Exited conversation')
                         return
+
+            repeat_amount = ''
+            for i in range(len(prompt)):
+                if prompt[i].isdigit():
+                    repeat_amount += prompt[i]
+                else:
+                    break
+            if repeat_amount == '':
+                repeat_amount = 1
+            else:
+                prompt = prompt[len(repeat_amount):]
+                for i in range(int(repeat_amount)):
+                    prompt_queue.append(prompt)
+                reprint_conversation()
+                continue
+
+            if prompt == '':
+                reprint_conversation()
+                continue
 
             if prompt == '?':
                 print(colorama.Fore.LIGHTGREEN_EX + 'Commands:')
@@ -529,7 +553,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[\\] Override command')
                 print('\t[_] Multiline (Ctrl+X with Enter to exit, Ctrl+C to cancel)' + colorama.Style.RESET_ALL)
                 continue
-
+            
             elif prompt == '??':
                 api_key_provided_by = "`api_key` variable" if (api_key != None) else \
                     ("OPENAI_API_KEY environment variable" if ('OPENAI_API_KEY' in os.environ) else None)
@@ -577,10 +601,6 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 conv.frequency_penalty = 0
                 conv.presence_penalty = 0
                 _print_info('Reset all properties')
-                continue
-            
-            if prompt == '':
-                reprint_conversation()
                 continue
 
             if prompt[0] != '\\':
@@ -957,30 +977,30 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
             else:
                 prompt = prompt[1:]
 
-        has_cancelled = False
-        printed_lines = [0]
-        stream_messages = []
-        try:
-            start_time = time.time()
-            response = asyncio.run(_get_response(conv=conv, prompt=prompt, i=(len(conv.previous) + 1), shorten_message=not full_view, printed_lines=printed_lines, stream_messages=stream_messages))
-        except KeyboardInterrupt:
-            arg = ''
+            has_cancelled = False
+            printed_lines = [0]
+            stream_messages = []
+            try:
+                start_time = time.time()
+                response = asyncio.run(_get_response(conv=conv, prompt=prompt, i=(len(conv.previous) + 1), shorten_message=not full_view, printed_lines=printed_lines, stream_messages=stream_messages))
+            except KeyboardInterrupt:
+                arg = ''
 
-            has_cancelled = True
-            response = ''.join(stream_messages)
-        except openai.OpenAIError as e:
-            print(colorama.Fore.RED + 'OpenAI Error:\n\t' + e.message + colorama.Style.RESET_ALL)
+                has_cancelled = True
+                response = ''.join(stream_messages)
+            except openai.OpenAIError as e:
+                print(colorama.Fore.RED + 'OpenAI Error:\n\t' + e.message + colorama.Style.RESET_ALL)
 
-        if len(printed_lines) > 0 and printed_lines[0] != 0:
-            _move_cur_up(printed_lines[0] + 1)
-            elapsed_time = math.floor((time.time() - start_time) * 10) / 10
-            _print_info(f'{"Cancelled" if has_cancelled else "Finished"} generating [{elapsed_time}s]')
+            if len(printed_lines) > 0 and printed_lines[0] != 0:
+                _move_cur_up(printed_lines[0] + 1)
+                elapsed_time = math.floor((time.time() - start_time) * 10) / 10
+                _print_info(f'{"Cancelled" if has_cancelled else "Finished"} generating [{elapsed_time}s]')
 
-            if has_cancelled:
-                conv.previous.append({'role':'user','content':prompt})
-                conv.previous.append({'role':'assistant','content':response})
+                if has_cancelled:
+                    conv.previous.append({'role':'user','content':prompt})
+                    conv.previous.append({'role':'assistant','content':response})
 
-            _print_message(message=({'role':'assistant', 'content':response}), shorten_message=(not full_view), i=(len(conv.previous) - 1))
+                _print_message(message=({'role':'assistant', 'content':response}), shorten_message=(not full_view), i=(len(conv.previous) - 1))
 
 def c(model='gpt-3.5-turbo', system=None, messages=None, temperature=0, top_p=0, max_tokens=2048, frequency_penalty=0, presence_penalty=0):
     conversation(model=model, system=system, messages=messages, temperature=temperature, top_p=top_p, max_tokens=max_tokens, frequency_penalty=frequency_penalty, presence_penalty=presence_penalty)
