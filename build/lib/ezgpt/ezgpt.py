@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.3.1'
+VERSION = '2.3.2'
 
 try:
     import pyperclip
@@ -198,12 +198,6 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
         print(dark + prefix + light + content + colorama.Style.RESET_ALL)
         return 1
 
-    code_index_counter = 0
-    def get_code_index_counter():
-        nonlocal code_index_counter
-        code_index_counter += 1
-        return str(code_index_counter)
-
     lines = message['content'].split('\n')
 
     max_width = shutil.get_terminal_size().columns - len(prefix) - 1
@@ -223,6 +217,11 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
             _print_info(f'+ {len(lines) - lines_printed}', end='')
             return True
         return False
+
+    if len(lines) == 0 or (len(lines) == 1 and lines[0] == ''):
+        print(dark + prefix)
+        return 1
+
     for ii in range(0, len(lines)):
         if check_if_above_vertical_limit():
             return lines_printed + 1
