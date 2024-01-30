@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.3.0'
+VERSION = '2.3.1'
 
 try:
     import pyperclip
@@ -286,6 +286,8 @@ async def _get_response(conv, prompt, i, shorten_message, printed_lines, stream_
     tasks = [loop.create_task(conv.get(user=prompt, messages=conv.previous, stream=True, stream_messages=stream_messages)), loop.create_task(_wait_for_response(stream_messages=stream_messages, i=i, shorten_message=shorten_message, printed_lines=printed_lines))]
 
     done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)        
+
+    await asyncio.sleep(0.1)
     
     for task in done:
         return task.result()
