@@ -97,7 +97,7 @@ There are special commands you can use:
 - `$[message]`: Set the system message. Leave message empty to remove. Use `_` as message for multiline
 - `+<index> [message]`: Insert message before index (double `+` for assistant instead of user). Index defaults to last message (append). Use `_` as `message` for multiline
     - *Example: `++0 Hello!`* will insert a message at the start by the assistant with content `Hello!`
-- `-<index>`: Remove message at index (double `-` for clear everything). Index defaults to last message
+- `-<index>`: Remove message at index (double `-` to clear every message, triple `-` to completely restart ezgpt.conversation). Index defaults to last message
     - *Example: `-0` will remove the first message*
 - `~[index] [message]`: Change message at index (double `~` for reverse role). If you use `~~` you don't need a message argument. Use `_` as `message` for multiline
     - *Example: `~~0 Hello!` will change the first message to `Hello!` and switch its role*

@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.3.2'
+VERSION = '2.4.0'
 
 try:
     import pyperclip
@@ -533,7 +533,7 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                 print('\t[$] Set system message')
                 print('\t')
                 print('\t[+] Insert message before index (double + for assistant)')
-                print('\t[-] Remove message at index (double - for clear conversation)')
+                print('\t[-] Remove message at index (double - for clear conversation, triple - to restart ezgpt.conversation)')
                 print('\t[~] Change message at index (double ~ for reverse role)')
                 print('\t')
                 print('\t[@] Copy message to clipboard')
@@ -697,13 +697,17 @@ def conversation(model='gpt-3.5-turbo', system=None, messages=None, user=None, t
                     continue
                 
                 elif prompt[0] == '-':
-                    clear_everything = len(prompt) == 2 and prompt[1] == '-'
+                    clear_messages = prompt == '--'
 
-                    if clear_everything:
+                    if clear_messages:
                         conv.previous = []
                         reprint_conversation()
                         continue
 
+                    clear_everything = prompt == '---'
+                    if clear_everything:
+                        return conversation()
+                    
                     valueString = prompt[1:]
 
                     try:
