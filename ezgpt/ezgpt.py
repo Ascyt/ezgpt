@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.4.1'
+VERSION = '2.4.2'
 
 try:
     import pyperclip
@@ -240,7 +240,10 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
                 check_if_above_vertical_limit(lines_printed)
 
             if not is_above_vertical_limit:
-                print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + line[iii:(iii + max_width)])
+                current_line = line[iii:(iii + max_width)]
+                print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + current_line, end='')
+                # Fill with spaces to fix rare printing issues
+                print((max_width - (len(prefix) + len(current_line))) * ' ')
 
             additional_prefix = '...'
             additional_prefix_length = 3
