@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.4.0'
+VERSION = '2.4.1'
 
 try:
     import pyperclip
@@ -206,25 +206,21 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
     code_counter = 0
 
     lines_printed = 0
-    def check_if_above_vertical_limit():
+    is_above_vertical_limit = False
+    def check_if_above_vertical_limit(lines_printed):
         nonlocal trim_vertical
         if not trim_vertical:
             return False
 
-        nonlocal lines_printed
-        nonlocal lines
-        if lines_printed >= shutil.get_terminal_size().lines - 2:
-            _print_info(f'+ {len(lines) - lines_printed}', end='')
-            return True
-        return False
+        return lines_printed > shutil.get_terminal_size().lines - 3
 
     if len(lines) == 0 or (len(lines) == 1 and lines[0] == ''):
         print(dark + prefix)
         return 1
 
     for ii in range(0, len(lines)):
-        if check_if_above_vertical_limit():
-            return lines_printed + 1
+        if not is_above_vertical_limit:
+            is_above_vertical_limit = check_if_above_vertical_limit(lines_printed)
 
         line = lines[ii]
 
@@ -240,10 +236,11 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
                 additional_prefix_length += len(str(code_counter)) + 1
 
         for iii in range(0, len(line), max_width):
-            if check_if_above_vertical_limit():
-                return lines_printed + 1
+            if not is_above_vertical_limit:
+                check_if_above_vertical_limit(lines_printed)
 
-            print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + line[iii:(iii + max_width)])
+            if not is_above_vertical_limit:
+                print(dark + (' ' * (len(prefix) - additional_prefix_length)) + additional_prefix + (dark if in_code or is_code_change else light) + line[iii:(iii + max_width)])
 
             additional_prefix = '...'
             additional_prefix_length = 3
@@ -254,8 +251,12 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
             in_code = not in_code
 
     print(colorama.Style.RESET_ALL, end='')
-    return lines_printed
 
+    if is_above_vertical_limit:
+        _print_info(f'+ {lines_printed - (shutil.get_terminal_size().lines - 2)}', end='')
+        lines_printed = shutil.get_terminal_size().lines - 1
+
+    return lines_printed
     
 
 async def _wait_for_response(stream_messages, i, shorten_message, printed_lines):
