@@ -11,7 +11,7 @@ import re
 import shutil
 
 # Has to also be updated in ../setup.py because I'm too lazy to make that work
-VERSION = '2.4.2'
+VERSION = '2.4.3'
 
 try:
     import pyperclip
@@ -200,7 +200,7 @@ def _print_message(message, shorten_message, i, custom_prefix = None, trim_verti
 
     lines = message['content'].split('\n')
 
-    max_width = shutil.get_terminal_size().columns - len(prefix) - 1
+    max_width = shutil.get_terminal_size().columns - len(prefix)
     
     in_code = False
     code_counter = 0
